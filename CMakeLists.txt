@@ -28,7 +28,7 @@ include_directories(${PYTHON_INCLUDE_PATH})
 link_directories(${PYTHON_LIBRARIES})
 
 find_package(Python3 REQUIRED COMPONENTS Development)
-find_package(Boost REQUIRED COMPONENTS python37)
+find_package(Boost REQUIRED COMPONENTS python37 numpy37)
 FIND_PACKAGE(PythonInterp 3)
 FIND_PACKAGE(PythonLibs 3 REQUIRED)
 
