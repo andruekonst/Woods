@@ -1,0 +1,23 @@
+cmake_minimum_required(VERSION 3.7)
+project(woods)
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+set(SOURCE_FILES src/woods.cpp)
+set (Boost_COMPILER "-vc")
+set (BOOST_ROOT "C:/Boost")
+set (BOOST_INCLUDEDIR  "C:/Boost/include/boost-1_73/")
+# set (BOOST_LIBRARYDIR  "C:/Boost/lib")
+set (Boost_USE_STATIC_RUNTIME ON)  
+# set (Boost_DEBUG ON)
+# set(Boost_DETAILED_FAILURE_MSG ON)
+
+find_package(Boost 1.73)
+
+if(Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
+    add_executable(woods ${SOURCE_FILES})
+    target_link_libraries(woods ${Boost_LIBRARIES})
+    message(STATUS "Boost is loaded")
+else()
+    message(STATUS "Something is wrong with boost")
+endif()
