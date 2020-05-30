@@ -1,5 +1,9 @@
+/*
+ * Entry point for python lib.
+ */
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
+#include <tree/tree.hpp>
 
 namespace np = boost::python::numpy;
 
@@ -21,4 +25,8 @@ BOOST_PYTHON_MODULE(woods) {
     np::initialize();
     def("greet", greet);
     def("mean", mean, (arg("x")));
+    // def("fit", woods::fit<double>, (arg("x"), arg("y")));
+    using GreedyDecisionRule = woods::tree::GreedyDecisionRule<double, woods::tree::SplitType::Uniform>;
+    class_<GreedyDecisionRule>("GreedyDecisionRule")
+        .def("fit", &GreedyDecisionRule::fit);
 }

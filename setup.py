@@ -42,6 +42,12 @@ class CMakeBuild(build_ext):
                       '-DPYTHON_EXECUTABLE=' + sys.executable]
 
         cfg = 'Debug' if self.debug else 'Release'
+
+        # hack begin
+        print("DIRTY HACK: Debug mode is ON")
+        cfg = 'Debug'
+        # hack end
+
         build_args = ['--config', cfg]
 
         if platform.system() == "Windows":
@@ -59,7 +65,11 @@ class CMakeBuild(build_ext):
         if not os.path.exists(self.build_temp):
             os.makedirs(self.build_temp)
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
-        subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
+        try:
+            subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
+        except Exception as ex:
+            print(f"Build exception: {ex}")
+            exit(1)
 
 setup(
     name='woods',

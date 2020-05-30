@@ -1,12 +1,19 @@
 cmake_minimum_required(VERSION 3.7)
 project(woods)
 
+include_directories(src/)
+set(SOURCE_FILES src/python.cpp
+                 src/interfaces.hpp
+                 src/checks.hpp
+                 src/utils.hpp
+                 src/tree/tree.hpp
+                 src/tree/impurity.hpp)
+
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MT")
-set(SOURCE_FILES src/woods.cpp)
 set (Boost_COMPILER "-vc")
 set (BOOST_ROOT "C:/Boost")
 set (BOOST_INCLUDEDIR  "C:/Users/andru/Anaconda3/Library/include")
@@ -28,7 +35,7 @@ include_directories(${PYTHON_INCLUDE_PATH})
 link_directories(${PYTHON_LIBRARIES})
 
 find_package(Python3 REQUIRED COMPONENTS Development)
-find_package(Boost REQUIRED COMPONENTS python37 numpy37)
+find_package(Boost REQUIRED COMPONENTS python37 numpy37 random)
 FIND_PACKAGE(PythonInterp 3)
 FIND_PACKAGE(PythonLibs 3 REQUIRED)
 
