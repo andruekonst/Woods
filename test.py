@@ -1,6 +1,7 @@
 import numpy as np
 import woods
-from sklearn.datasets import make_regression
+from sklearn.datasets import make_regression, make_friedman1
+from time import time
 
 a = np.arange(10)
 print(a)
@@ -35,31 +36,42 @@ print(y)
 print("woods tree predictions:", dt.predict(X))
 print(np.mean(np.linalg.norm(y - dt.predict(X))))
 
-X, y = make_regression(random_state=0)
+from sklearn.model_selection import train_test_split
+X, y = make_friedman1(275, noise=1.0, random_state=0)
 X = X.astype(np.double)
 y = y.astype(np.double)
-print("MEAN")
-print(np.mean(y))
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
+
 rdt = woods.RandomizedDecisionTree()
 rdt.set_depth(5)
-rdt.fit(X, y, 0)
+rdt.fit(X_train, y_train, 0)
 print("woods randomized decision tree predictions:") # , rdt.predict(X))
-print(np.mean(np.linalg.norm(y - rdt.predict(X))))
+print(np.mean(np.linalg.norm(y_test - rdt.predict(X_test))))
 
 gbm = woods.RandomizedGradientBoosting()
-gbm.set_depth(5)
+gbm.set_depth(3)
 gbm.set_iterations(100)
-gbm.set_learning_rate(0.1)
-gbm.fit(X, y, 0)
+gbm.set_learning_rate(0.2)
+start = time()
+for i in range(100):
+    gbm.fit(X_train, y_train, 0)
+end = time()
+print(f"time: {end - start}")
 print("woods gradient boosting predictions:") # , gbm.predict(X))
-print(np.mean(np.linalg.norm(y - gbm.predict(X))))
+print(np.mean(np.linalg.norm(y_test - gbm.predict(X_test))))
 
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.tree import DecisionTreeRegressor
-# est = GradientBoostingRegressor()
-est = DecisionTreeRegressor(max_depth=5, splitter="random", random_state=0)
-est.fit(X, y)
-print(np.mean(np.linalg.norm(y - est.predict(X))))
+est = GradientBoostingRegressor(max_depth=3)
+# est = DecisionTreeRegressor(max_depth=5, splitter="random", random_state=0)
+start = time()
+for i in range(100):
+    est.fit(X_train, y_train)
+end = time()
+print(f"time: {end - start}")
+print("sklearn gradient boosting predictions:")
+print(np.mean(np.linalg.norm(y_test - est.predict(X_test))))
 
 print("Done")
 # print(woods.mean())

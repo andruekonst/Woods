@@ -44,8 +44,8 @@ class CMakeBuild(build_ext):
         cfg = 'Debug' if self.debug else 'Release'
 
         # hack begin
-        print("DIRTY HACK: Debug mode is ON")
-        cfg = 'Debug'
+        # print("DIRTY HACK: Debug mode is ON")
+        # cfg = 'Debug'
         # hack end
 
         build_args = ['--config', cfg]
