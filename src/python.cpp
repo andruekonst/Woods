@@ -28,5 +28,21 @@ BOOST_PYTHON_MODULE(woods) {
     // def("fit", woods::fit<double>, (arg("x"), arg("y")));
     using GreedyDecisionRule = woods::tree::GreedyDecisionRule<double, woods::tree::SplitType::Uniform>;
     class_<GreedyDecisionRule>("GreedyDecisionRule")
-        .def("fit", &GreedyDecisionRule::fit);
+        .def("fit", &GreedyDecisionRule::fit)
+        .def("predict", &GreedyDecisionRule::predict)
+        .def("get_split", &GreedyDecisionRule::get_split);
+
+    using Tree = woods::tree::RandomizedDecisionTree<double, woods::tree::SplitType::Mean>;
+    class_<Tree>("RandomizedDecisionTree")
+        .def("set_depth", &Tree::set_depth)
+        .def("fit", &Tree::fit)
+        .def("predict", &Tree::predict);
+
+    using GradientBoosting = woods::tree::RandomizedGradientBoosting<double, woods::tree::SplitType::Uniform>;
+    class_<GradientBoosting>("RandomizedGradientBoosting")
+        .def("set_depth", &GradientBoosting::set_depth)
+        .def("set_learning_rate", &GradientBoosting::set_learning_rate)
+        .def("set_iterations", &GradientBoosting::set_iterations)
+        .def("fit", &GradientBoosting::fit)
+        .def("predict", &GradientBoosting::predict);
 }

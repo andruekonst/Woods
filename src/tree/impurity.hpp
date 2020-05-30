@@ -1,13 +1,15 @@
 #ifndef _TREES_IMPURITY_HPP_
 #define _TREES_IMPURITY_HPP_
 
+#include <iostream>
+
 namespace woods {
 namespace tree {
 
     template<class DType>
     struct VariancePartialImpurity {
         template<class It>
-        DType operator() (It begin, It end) {
+        std::pair<DType, DType> operator() (It begin, It end) {
             size_t n = std::distance(begin, end);
             DType mean = 0;
             for (auto it = begin; it != end; ++it) {
@@ -20,7 +22,7 @@ namespace tree {
                 const DType dist = it->second - mean;
                 var += dist * dist;
             }
-            return var;
+            return { mean, var };
         }
     };
 

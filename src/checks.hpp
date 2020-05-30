@@ -9,8 +9,12 @@ namespace checks {
     namespace dims {
         namespace np = boost::python::numpy;
 
-        inline bool matrix_input_vector_output(const np::ndarray& x, const np::ndarray& y) {
-            return static_cast<int>(x.get_nd()) == 2 && static_cast<int>(y.get_nd()) == 1;
+        inline bool is_matrix(const np::ndarray& x) {
+            return static_cast<int>(x.get_nd()) == 2;
+        }
+
+        inline bool is_vector(const np::ndarray& y) {
+            return static_cast<int>(y.get_nd()) == 1;
         }
 
         inline bool compatible_lengths(const np::ndarray& x, const np::ndarray& y) {

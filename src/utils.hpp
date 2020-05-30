@@ -1,25 +1,14 @@
 #ifndef _UTILS_HPP_
 #define _UTILS_HPP_
 
+#include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
+namespace py = boost::python;
 namespace np = boost::python::numpy;
 
 namespace woods {
 
 namespace utils {
-
-namespace checks {
-    namespace dims {
-        inline bool matrix_input_vector_output(const np::ndarray& x, const np::ndarray& y) {
-            return static_cast<int>(x.get_nd()) == 2 && static_cast<int>(y.get_nd()) == 1;
-        }
-
-        inline bool compatible_lengths(const np::ndarray& x, const np::ndarray& y) {
-            return static_cast<int>(x.shape(0)) == static_cast<int>(y.shape(0));
-        }
-    }
-} // namespace checks
-
 
     template<class DType>
     inline std::vector<std::vector<DType>> matrix_to_columns(const np::ndarray& x) {
@@ -45,6 +34,16 @@ namespace checks {
             column[i] = data[i];
         }
         return column;
+    }
+
+    template<class DType>
+    inline np::ndarray to_ndarray(const std::vector<DType> &column) {
+        int n_elements = static_cast<int>(column.size());
+        py::tuple shape = py::make_tuple(n_elements);
+        py::tuple stride = py::make_tuple(sizeof(DType));
+        np::dtype dt = np::dtype::get_builtin<DType>();
+        np::ndarray output = np::from_data(&column[0], dt, shape, stride, py::object());
+        return output.copy();
     }
 
 } // namespace utils
