@@ -108,11 +108,17 @@ namespace tree {
             };
         }
 
+        // parameters
+        int split_iterations = 1;
     public:
         Split<DType> split_info;
 
         boost::python::tuple get_split() {
             return boost::python::make_tuple(split_info.threshold, split_info.feature);
+        }
+
+        void set_split_iterations(int iter) {
+            split_iterations = iter;
         }
 
         void fit_impl(const Matrix &columns, const Column &target, const unsigned random_seed) { // override {
@@ -124,10 +130,12 @@ namespace tree {
             boost::random::mt19937 rng(static_cast<unsigned>(random_seed));
 
             for (size_t j = 0; j < n_features; j++) {
-                Split<DType> current = find_split<short>(columns[j], target, rng);
-                if (current.impurity < bestImpurity) {
-                    bestSplit = current;
-                    bestSplit.feature = j;
+                for (int iter = 0; iter < split_iterations; iter++) {
+                    Split<DType> current = find_split<short>(columns[j], target, rng);
+                    if (current.impurity < bestImpurity) {
+                        bestSplit = current;
+                        bestSplit.feature = j;
+                    }
                 }
             }
 

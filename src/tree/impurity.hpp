@@ -38,6 +38,7 @@ namespace tree {
             // multiply variances by number of samples (impurity = n_left/N * left_var + n_right / N * right_var)
             left_var *= n_left;
             right_var *= n_right;
+
             return { left_mean, left_var, right_mean, right_var };
         }
     };

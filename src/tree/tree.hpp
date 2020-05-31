@@ -31,6 +31,7 @@ namespace tree {
 
         // parameters
         int depth = 1;
+        int min_samples_split = 2;
     public:
         void set_depth(int new_depth) {
             depth = new_depth;
@@ -42,7 +43,7 @@ namespace tree {
             if (inv_depth == 0 || target.size() == 0)
                 return -1;
 
-            if (!is_first && indices.size() == 0)
+            if (!is_first && indices.size() < min_samples_split)
                 return -1;
 
             // prepare seeds for next nodes
