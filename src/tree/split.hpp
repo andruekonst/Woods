@@ -5,7 +5,7 @@ namespace woods {
 namespace tree {
 
     enum class SplitType {
-        Mean, Uniform, TruncatedNormal, Median
+        Mean, Uniform, TruncatedNormal, Median, Best
     };
 
     template<class DType>
