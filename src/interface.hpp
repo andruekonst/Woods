@@ -26,7 +26,7 @@ namespace interface {
         }
 
         np::ndarray predict(const np::ndarray &x) {
-            assert(checks::dims::is_matrix(x));
+            assert(check::dims::is_matrix(x));
 
             Matrix columns = utils::matrix_to_columns<DType>(x);
             Column predictions = predict_impl(columns);
