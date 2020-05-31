@@ -14,42 +14,13 @@
 
 
 namespace woods {
-
 namespace tree {
 
     enum class SplitType {
         Mean, Uniform, TruncatedNormal
     };
 
-    template<class DType>
-    class Estimator {
-        using Column = std::vector<DType>;
-        using Matrix = std::vector<Column>;
-    public:
-        void fit(const np::ndarray &x, const np::ndarray &y, const unsigned random_seed) {
-            assert(checks::dims::is_matrix(x));
-            assert(checks::dims::is_vector(y));
-            assert(checks::dims::compatible_lengths(x, y));
-
-            // make array column-wise
-            Matrix columns = utils::matrix_to_columns<DType>(x);
-            Column target  = utils::to_column<DType>(y);
-
-            fit_impl(columns, target, random_seed);
-        }
-
-        np::ndarray predict(const np::ndarray &x) {
-            assert(checks::dims::is_matrix(x));
-
-            Matrix columns = utils::matrix_to_columns<DType>(x);
-            Column predictions = predict_impl(columns);
-
-            return utils::to_ndarray(predictions);
-        }
-
-        virtual void fit_impl(const Matrix &columns, const Column &target, const unsigned random_seed) {}
-        virtual Column predict_impl(const Matrix &columns) = 0;
-    };
+    using namespace woods::interface;
 
     template<class DType>
     struct Split {
@@ -487,18 +458,17 @@ namespace tree {
     };
 
 
-    template<class FitOperation, class PredictOperation>
-    class GreedyRule : public FitOperation, public PredictOperation {
+    // template<class FitOperation, class PredictOperation>
+    // class GreedyRule : public FitOperation, public PredictOperation {
 
-    };
+    // };
 
-    template<class FitOperation, class PredictOperation>
-    class DecisionTree : public FitOperation, public PredictOperation {
+    // template<class FitOperation, class PredictOperation>
+    // class DecisionTree : public FitOperation, public PredictOperation {
 
-    };
+    // };
 
 } // namespace tree
-
 } // namespace woods
 
 #endif // _TREES_TREE_HPP_

@@ -9,7 +9,7 @@ namespace tree {
     template<class DType>
     struct VariancePartialImpurity {
         template<class It>
-        std::pair<DType, DType> operator() (It begin, It end) {
+        inline std::pair<DType, DType> operator() (It begin, It end) {
             size_t n = std::distance(begin, end);
             DType mean = 0;
             for (auto it = begin; it != end; ++it) {
