@@ -69,6 +69,7 @@ namespace ensemble {
         Column predict_impl(const Matrix &columns) { // override {
             // return splitters.back().predict_impl(columns);
             Column predictions(columns[0].size(), mean);
+            // #pragma omp parallel for
             for (int iter = 0; iter < iterations; iter++) {
                 auto tree_predictions = trees[iter].predict_impl(columns);
                 for (int i = 0; i < predictions.size(); i++) {
