@@ -73,6 +73,17 @@ namespace tree {
                     threshold = min;
                 }
                 break;
+            case SplitType::Median:
+                std::nth_element(pairs.begin(), pairs.begin() + pairs.size() / 2, pairs.end(), [](const auto &a, const auto &b) {
+                    return a.first < b.first;
+                });
+                
+                threshold = pairs[pairs.size() / 2].first;
+                if (pairs.size() % 2 == 0) {
+                    threshold += pairs[pairs.size() / 2 - 1].first;
+                    threshold /= 2;
+                }
+                break;
             }
 
             PartialImpurity partialImpurity;
@@ -150,12 +161,18 @@ namespace tree {
             split_info = bestSplit;
         }
 
-        virtual Column predict_impl(const Matrix &columns) {
+        Column predict_impl(const Matrix &columns) {
             Column predictions(columns[0].size());
             for (int i = 0; i < predictions.size(); i++) {
-                // predictions[i] = (columns[split_info.feature][i] <= split_info.threshold) ?
-                //                     split_info.left_value : split_info.right_value;
                 predictions[i] = split_info.values[(columns[split_info.feature][i] > split_info.threshold)];
+            }
+            return predictions;
+        }
+
+        Column predict_impl_rowwise(const Matrix &rows) {
+            Column predictions(columns.size());
+            for (int i = 0; i < predictions.size(); i++) {
+                predictions[i] = split_info.values[(columns[i][split_info.feature] > split_info.threshold)];
             }
             return predictions;
         }

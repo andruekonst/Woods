@@ -45,5 +45,6 @@ BOOST_PYTHON_MODULE(woods) {
         .def("set_learning_rate", &GradientBoosting::set_learning_rate)
         .def("set_iterations", &GradientBoosting::set_iterations)
         .def("fit", &GradientBoosting::fit)
-        .def("predict", &GradientBoosting::predict);
+        .def("predict", &GradientBoosting::predict)
+        .def("predict_rowwise", &GradientBoosting::predict_rowwise);
 }

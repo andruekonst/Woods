@@ -7,7 +7,6 @@ namespace py = boost::python;
 namespace np = boost::python::numpy;
 
 namespace woods {
-
 namespace utils {
 
     template<class DType>
@@ -23,6 +22,21 @@ namespace utils {
             columns[i % n_features][i / n_features] = x_data[i];
         }
         return columns;
+    }
+
+    template<class DType>
+    inline std::vector<std::vector<DType>> matrix_to_rows(const np::ndarray& x) {
+        const int n_samples  = static_cast<int>(x.shape(0));
+        const int n_features = static_cast<int>(x.shape(1));
+        const long n_elements = n_samples * n_features;
+
+        std::vector<std::vector<DType>> rows(n_samples, std::vector<DType>(n_features));
+        const DType* x_data = reinterpret_cast<DType*>(x.get_data());
+        
+        for (long i = 0; i < n_elements; i++) {
+            rows[i / n_features][i % n_features] = x_data[i];
+        }
+        return rows;
     }
 
     template<class DType>
@@ -47,7 +61,6 @@ namespace utils {
     }
 
 } // namespace utils
-
 } // namespace woods
 
 #endif // _UTILS_HPP_

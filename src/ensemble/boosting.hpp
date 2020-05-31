@@ -66,12 +66,22 @@ namespace ensemble {
             }
         }
 
-        Column predict_impl(const Matrix &columns) { // override {
-            // return splitters.back().predict_impl(columns);
+        Column predict_impl(const Matrix &columns) {
             Column predictions(columns[0].size(), mean);
             // #pragma omp parallel for
             for (int iter = 0; iter < iterations; iter++) {
                 auto tree_predictions = trees[iter].predict_impl(columns);
+                for (int i = 0; i < predictions.size(); i++) {
+                    predictions[i] += learning_rate * tree_predictions[i];
+                }
+            }
+            return predictions;
+        }
+        
+        Column predict_impl_rowwise(const Matrix &rows) {
+            Column predictions(rows.size(), mean);
+            for (int iter = 0; iter < iterations; iter++) {
+                auto tree_predictions = trees[iter].predict_impl_rowwise(rows);
                 for (int i = 0; i < predictions.size(); i++) {
                     predictions[i] += learning_rate * tree_predictions[i];
                 }

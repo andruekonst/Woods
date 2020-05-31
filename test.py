@@ -67,6 +67,23 @@ for j in range(n_experiments):
 print(f"time: {np.mean(gbm_times)} +- {np.std(gbm_times)}")
 print("woods gradient boosting predictions:") # , gbm.predict(X))
 print(np.mean(np.linalg.norm(y_test - gbm.predict(X_test))))
+print("woods gbm predict times:")
+gbm_times = []
+for j in range(n_experiments):
+    start = time()
+    for i in range(n_repeats):
+        gbm.predict(X_train)
+    end = time()
+    gbm_times.append(end - start)
+print(f"  {np.mean(gbm_times)} +- {np.std(gbm_times)}")
+gbm_times = []
+for j in range(n_experiments):
+    start = time()
+    for i in range(n_repeats):
+        gbm.predict_rowwise(X_train)
+    end = time()
+    gbm_times.append(end - start)
+print(f"  {np.mean(gbm_times)} +- {np.std(gbm_times)}")
 
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.tree import DecisionTreeRegressor

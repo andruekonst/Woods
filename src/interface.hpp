@@ -34,6 +34,15 @@ namespace interface {
             return utils::to_ndarray(predictions);
         }
 
+        np::ndarray predict_rowwise(const np::ndarray &x) {
+            assert(check::dims::is_matrix(x));
+
+            Matrix rows = utils::matrix_to_rows<DType>(x);
+            Column predictions = predict_impl_rowwise(rows);
+
+            return utils::to_ndarray(predictions);
+        }
+
         // virtual void fit_impl(const Matrix &columns, const Column &target, const unsigned random_seed) {}
         // virtual Column predict_impl(const Matrix &columns) = 0;
     };

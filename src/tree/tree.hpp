@@ -83,7 +83,7 @@ namespace tree {
             build_tree<Ind>(columns, target, random_seed, depth, std::vector<Ind>(), true);
         }
 
-        virtual Column predict_impl(const Matrix &columns) {
+        Column predict_impl(const Matrix &columns) {
             Column predictions(columns[0].size());
             for (int i = 0; i < predictions.size(); i++) {
                 int cur = 0;
@@ -96,6 +96,23 @@ namespace tree {
                     cur = routes[cur][cond];
                     val = split_info.values[cond];
                     // std::cout << cur << std::endl;
+                } while (cur > 0);
+                predictions[i] = val;
+            }
+            return predictions;
+        }
+        
+        Column predict_impl_rowwise(const Matrix &rows) {
+            Column predictions(rows.size());
+            for (int i = 0; i < predictions.size(); i++) {
+                int cur = 0;
+                DType val;
+                const auto &cur_row = rows[i];
+                do {
+                    auto &split_info = splitters[cur].split_info;
+                    bool cond = cur_row[split_info.feature] > split_info.threshold;
+                    cur = routes[cur][cond];
+                    val = split_info.values[cond];
                 } while (cur > 0);
                 predictions[i] = val;
             }
