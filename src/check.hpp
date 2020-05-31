@@ -5,7 +5,7 @@
 
 namespace woods {
 
-namespace checks {
+namespace check {
     namespace dims {
         namespace np = boost::python::numpy;
 

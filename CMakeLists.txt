@@ -3,11 +3,13 @@ project(woods)
 
 include_directories(src/)
 set(SOURCE_FILES src/python.cpp
-                 src/interfaces.hpp
-                 src/checks.hpp
+                 src/interface.hpp
+                 src/check.hpp
                  src/utils.hpp
                  src/tree/tree.hpp
-                 src/tree/impurity.hpp)
+                 src/tree/impurity.hpp
+                 src/tree/split.hpp
+                 src/tree/rule.hpp)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

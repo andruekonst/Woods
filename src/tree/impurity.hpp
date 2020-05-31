@@ -1,8 +1,6 @@
 #ifndef _TREES_IMPURITY_HPP_
 #define _TREES_IMPURITY_HPP_
 
-#include <iostream>
-
 namespace woods {
 namespace tree {
 
