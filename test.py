@@ -49,15 +49,22 @@ rdt.fit(X_train, y_train, 0)
 print("woods randomized decision tree predictions:") # , rdt.predict(X))
 print(np.mean(np.linalg.norm(y_test - rdt.predict(X_test))))
 
+n_experiments = 10
+n_repeats = 100
+
 gbm = woods.RandomizedGradientBoosting()
 gbm.set_depth(3)
 gbm.set_iterations(100)
 gbm.set_learning_rate(0.2)
-start = time()
-for i in range(100):
-    gbm.fit(X_train, y_train, 0)
-end = time()
-print(f"time: {end - start}")
+
+gbm_times = []
+for j in range(n_experiments):
+    start = time()
+    for i in range(n_repeats):
+        gbm.fit(X_train, y_train, 0)
+    end = time()
+    gbm_times.append(end - start)
+print(f"time: {np.mean(gbm_times)} +- {np.std(gbm_times)}")
 print("woods gradient boosting predictions:") # , gbm.predict(X))
 print(np.mean(np.linalg.norm(y_test - gbm.predict(X_test))))
 
@@ -65,11 +72,14 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.tree import DecisionTreeRegressor
 est = GradientBoostingRegressor(max_depth=3)
 # est = DecisionTreeRegressor(max_depth=5, splitter="random", random_state=0)
-start = time()
-for i in range(100):
-    est.fit(X_train, y_train)
-end = time()
-print(f"time: {end - start}")
+est_times = []
+for j in range(n_experiments):
+    start = time()
+    for i in range(n_repeats):
+        est.fit(X_train, y_train)
+    end = time()
+    est_times.append(end - start)
+print(f"time: {np.mean(est_times)} +- {np.std(est_times)}")
 print("sklearn gradient boosting predictions:")
 print(np.mean(np.linalg.norm(y_test - est.predict(X_test))))
 

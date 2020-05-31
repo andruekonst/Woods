@@ -38,7 +38,8 @@ namespace tree {
         std::unordered_map<int, int> route_left;
         std::unordered_map<int, int> route_right;
 
-        std::array<std::vector<int>, 2> routes;
+        // std::array<std::vector<int>, 2> routes;
+        std::vector<std::array<int, 2>> routes;
 
         // parameters
         int depth = 1;
@@ -117,15 +118,23 @@ namespace tree {
             flatten_tree(tree);
             clean_node(tree);
 
-            routes[0].resize(route_left.size());
-            routes[1].resize(route_right.size());
-            std::fill(routes[0].begin(), routes[0].end(), -1);
-            std::fill(routes[1].begin(), routes[1].end(), -1);
+            // routes[0].resize(route_left.size());
+            // routes[1].resize(route_right.size());
+            // std::fill(routes[0].begin(), routes[0].end(), -1);
+            // std::fill(routes[1].begin(), routes[1].end(), -1);
+            // for (auto &p : route_left) {
+            //     routes[0][p.first] = p.second;
+            // }
+            // for (auto &p : route_right) {
+            //     routes[1][p.first] = p.second;
+            // }
+            routes.resize(std::max(route_left.size(), route_right.size()));
+            std::fill(routes.begin(), routes.end(), std::array<int, 2>{-1, -1});
             for (auto &p : route_left) {
-                routes[0][p.first] = p.second;
+                routes[p.first][0] = p.second;
             }
             for (auto &p : route_right) {
-                routes[1][p.first] = p.second;
+                routes[p.first][1] = p.second;
             }
             route_left.clear();
             route_right.clear();
@@ -143,7 +152,8 @@ namespace tree {
                     auto &split_info = splitters[cur].split_info;
                     // std::cout << "  " << cur << ": " << split_info.feature << " / " << split_info.threshold << std::endl;
                     bool cond = columns[split_info.feature][i] > split_info.threshold;
-                    cur = routes[cond][cur];
+                    // cur = routes[cond][cur];
+                    cur = routes[cur][cond];
                     val = split_info.values[cond];
                     // std::cout << cur << std::endl;
                 } while (cur > 0);
