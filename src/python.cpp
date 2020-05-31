@@ -4,6 +4,7 @@
 #include <boost/python.hpp>
 #include <boost/python/numpy.hpp>
 #include <tree/tree.hpp>
+#include <ensemble/boosting.hpp>
 
 namespace np = boost::python::numpy;
 
@@ -32,13 +33,13 @@ BOOST_PYTHON_MODULE(woods) {
         .def("predict", &GreedyDecisionRule::predict)
         .def("get_split", &GreedyDecisionRule::get_split);
 
-    using Tree = woods::tree::RandomizedDecisionTree<double, woods::tree::SplitType::Mean>;
+    using Tree = woods::tree::RandomizedDecisionTree<double, woods::tree::SplitType::Uniform>;
     class_<Tree>("RandomizedDecisionTree")
         .def("set_depth", &Tree::set_depth)
         .def("fit", &Tree::fit)
         .def("predict", &Tree::predict);
 
-    using GradientBoosting = woods::tree::RandomizedGradientBoosting<double, woods::tree::SplitType::Uniform>;
+    using GradientBoosting = woods::ensemble::GradientBoosting<double, Tree>;
     class_<GradientBoosting>("RandomizedGradientBoosting")
         .def("set_depth", &GradientBoosting::set_depth)
         .def("set_learning_rate", &GradientBoosting::set_learning_rate)

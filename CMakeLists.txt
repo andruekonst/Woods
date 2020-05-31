@@ -9,7 +9,8 @@ set(SOURCE_FILES src/python.cpp
                  src/tree/tree.hpp
                  src/tree/impurity.hpp
                  src/tree/split.hpp
-                 src/tree/rule.hpp)
+                 src/tree/rule.hpp
+                 src/ensemble/boosting.hpp)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
