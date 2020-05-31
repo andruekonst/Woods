@@ -27,13 +27,13 @@ BOOST_PYTHON_MODULE(woods) {
     def("greet", greet);
     def("mean", mean, (arg("x")));
     // def("fit", woods::fit<double>, (arg("x"), arg("y")));
-    using GreedyDecisionRule = woods::tree::GreedyDecisionRule<double, woods::tree::SplitType::Uniform>;
-    class_<GreedyDecisionRule>("GreedyDecisionRule")
-        .def("fit", &GreedyDecisionRule::fit)
-        .def("predict", &GreedyDecisionRule::predict)
-        .def("get_split", &GreedyDecisionRule::get_split);
+    using RandomDecisionRule = woods::tree::DecisionRule<double, woods::tree::SplitType::Uniform>;
+    class_<RandomDecisionRule>("RandomDecisionRule")
+        .def("fit", &RandomDecisionRule::fit)
+        .def("predict", &RandomDecisionRule::predict)
+        .def("get_split", &RandomDecisionRule::get_split);
 
-    using Tree = woods::tree::RandomizedDecisionTree<double, woods::tree::SplitType::Uniform>;
+    using Tree = woods::tree::DecisionTree<double, RandomDecisionRule>;
     class_<Tree>("RandomizedDecisionTree")
         .def("set_depth", &Tree::set_depth)
         .def("fit", &Tree::fit)

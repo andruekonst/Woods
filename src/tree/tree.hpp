@@ -26,14 +26,12 @@ namespace tree {
 
     using namespace interface;
 
-    template<class DType, SplitType type = SplitType::Mean, class PartialImpurity = VariancePartialImpurity<DType>>
-    class RandomizedDecisionTreeImpl {
+    template<class DType, class SplitRule>
+    class DecisionTreeImpl {
         using Column = std::vector<DType>;
         using Matrix = std::vector<Column>;
 
-        // std::vector<GreedyDecisionRule<DType, type, PartialImpurity>> splitters;
-        // std::vector<std::pair<int, int>> routes;
-        using Splitter = GreedyDecisionRule<DType, type, PartialImpurity>;
+        using Splitter = SplitRule;
         TreeNode<Splitter> * tree = nullptr;
         std::vector<Splitter> splitters;
         std::unordered_map<int, int> route_left;
@@ -62,7 +60,7 @@ namespace tree {
             int left_seed  = seeds(rng);
             int right_seed = seeds(rng);
 
-            GreedyDecisionRule<DType, type, PartialImpurity> splitter;
+            Splitter splitter;
             if (is_first)
                 splitter.fit_impl(columns, target, random_seed);
             else
@@ -155,14 +153,14 @@ namespace tree {
             return predictions;
         }
 
-        ~RandomizedDecisionTreeImpl() {
+        ~DecisionTreeImpl() {
             if (tree)
                 clean_node(tree);
         }
     };
 
-    template<class DType, SplitType type = SplitType::Mean, class PartialImpurity = VariancePartialImpurity<DType>>
-    using RandomizedDecisionTree = interface::EstimatorInterface<DType, RandomizedDecisionTreeImpl<DType, type, PartialImpurity>>;
+    template<class DType, class SplitRule>
+    using DecisionTree = interface::EstimatorInterface<DType, DecisionTreeImpl<DType, SplitRule>>;
 
 } // namespace tree
 } // namespace woods

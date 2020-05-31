@@ -11,7 +11,7 @@ namespace woods {
 namespace tree {
 
     template<class DType, SplitType type = SplitType::Mean, class PartialImpurity = VariancePartialImpurity<DType>>
-    class GreedyDecisionRuleImpl {
+    class DecisionRuleImpl {
         using Column = std::vector<DType>;
         using Matrix = std::vector<Column>;
         using FitData = std::pair<Matrix, Column>;
@@ -219,7 +219,7 @@ namespace tree {
 
 
     template<class DType, SplitType type = SplitType::Mean, class PartialImpurity = VariancePartialImpurity<DType>>
-    using GreedyDecisionRule = interface::EstimatorInterface<DType, GreedyDecisionRuleImpl<DType, type, PartialImpurity>>;
+    using DecisionRule = interface::EstimatorInterface<DType, DecisionRuleImpl<DType, type, PartialImpurity>>;
 
 } // namespace tree
 } // namespace woods
