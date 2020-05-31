@@ -1,5 +1,5 @@
-#ifndef _TREES_TREE_HPP_
-#define _TREES_TREE_HPP_
+#ifndef _TREE_TREE_HPP_
+#define _TREE_TREE_HPP_
 
 #include <interface.hpp>
 #include <check.hpp>
@@ -109,4 +109,4 @@ namespace tree {
 } // namespace tree
 } // namespace woods
 
-#endif // _TREES_TREE_HPP_
+#endif // _TREE_TREE_HPP_

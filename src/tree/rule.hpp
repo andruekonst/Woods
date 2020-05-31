@@ -75,15 +75,10 @@ namespace tree {
                 break;
             }
 
-            auto middle = std::partition(pairs.begin(), pairs.end(), [threshold](auto &p) {
-                return p.first <= threshold;
-            });
-
             PartialImpurity partialImpurity;
             DType left_impurity, right_impurity;
             DType left_value, right_value;
-            std::tie(left_value, left_impurity) = partialImpurity(pairs.begin(), middle);
-            std::tie(right_value, right_impurity) = partialImpurity(middle, pairs.end());
+            std::tie(left_value, left_impurity, right_value, right_impurity) = partialImpurity(pairs.begin(), pairs.end(), threshold);
 
             // variance is multiplied by number of "left" elements
             // left_var /= n_left;
