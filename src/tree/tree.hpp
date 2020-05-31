@@ -17,8 +17,6 @@
 
 namespace woods {
 namespace tree {
-    using namespace woods::interface;
-
     template<class Value>
     struct TreeNode {
         Value value;
@@ -26,11 +24,10 @@ namespace tree {
         TreeNode *right;
     };
 
-    // template<class DType, SplitType type = SplitType::Mean, class PartialImpurity = VariancePartialImpurity<DType>>
-    // using GreedyDecisionRule = EstimatorInterface<DType, GreedyDecisionRuleImpl<DType, type, PartialImpurity>>;
+    using namespace interface;
 
     template<class DType, SplitType type = SplitType::Mean, class PartialImpurity = VariancePartialImpurity<DType>>
-    class RandomizedDecisionTree : public Estimator<DType> {
+    class RandomizedDecisionTreeImpl {
         using Column = std::vector<DType>;
         using Matrix = std::vector<Column>;
 
@@ -109,7 +106,7 @@ namespace tree {
             return index;
         }
 
-        void fit_impl(const Matrix &columns, const Column &target, const unsigned random_seed) override {
+        void fit_impl(const Matrix &columns, const Column &target, const unsigned random_seed) { // override {
             const size_t n_features = columns.size();
             // splitters.push_back(GreedyDecisionRule<DType, type, PartialImpurity>());
             // splitters.back().fit_impl(columns, target, seed);
@@ -130,7 +127,7 @@ namespace tree {
             tree = nullptr;
         }
 
-        virtual Column predict_impl(const Matrix &columns) override {
+        virtual Column predict_impl(const Matrix &columns) { // override {
             // return splitters.back().predict_impl(columns);
             Column predictions(columns[0].size());
             for (int i = 0; i < predictions.size(); i++) {
@@ -158,12 +155,14 @@ namespace tree {
             return predictions;
         }
 
-        ~RandomizedDecisionTree() {
+        ~RandomizedDecisionTreeImpl() {
             if (tree)
                 clean_node(tree);
         }
     };
 
+    template<class DType, SplitType type = SplitType::Mean, class PartialImpurity = VariancePartialImpurity<DType>>
+    using RandomizedDecisionTree = interface::EstimatorInterface<DType, RandomizedDecisionTreeImpl<DType, type, PartialImpurity>>;
 
 
     template<class DType, SplitType type = SplitType::Mean, class PartialImpurity = VariancePartialImpurity<DType>>
@@ -239,17 +238,6 @@ namespace tree {
             return predictions;
         }
     };
-
-
-    // template<class FitOperation, class PredictOperation>
-    // class GreedyRule : public FitOperation, public PredictOperation {
-
-    // };
-
-    // template<class FitOperation, class PredictOperation>
-    // class DecisionTree : public FitOperation, public PredictOperation {
-
-    // };
 
 } // namespace tree
 } // namespace woods
