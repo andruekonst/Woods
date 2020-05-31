@@ -19,8 +19,9 @@ namespace tree {
         using FitData = std::pair<Matrix, Column>;
         using PairsVector = std::vector<std::pair<DType, DType>>;
 
-        DType find_threshold(PairsVector &pairs, const DType min, const DType max, const int num,
-                             boost::random::mt19937 &rng) {
+        template<class I>
+        inline DType find_threshold(const Column &column, const Column &target, std::vector<I> * indices,
+                                    const DType min, const DType max, const int num, boost::random::mt19937 &rng) {
             /*
              * Convention:
              * Each expensive operation (like sorting) should be performed once,
@@ -55,27 +56,29 @@ namespace tree {
                 break;
             case SplitType::Median:
                 if (num == 0) {
-                    std::nth_element(pairs.begin(), pairs.begin() + pairs.size() / 2, pairs.end(), [](const auto &a, const auto &b) {
-                        return a.first < b.first;
-                    });
+                    // std::nth_element(pairs.begin(), pairs.begin() + pairs.size() / 2, pairs.end(), [](const auto &a, const auto &b) {
+                    //     return a.first < b.first;
+                    // });
                 }
                 // else assume half of vector is sorted
                 
-                threshold = pairs[pairs.size() / 2].first;
-                if (pairs.size() % 2 == 0) {
-                    threshold += pairs[pairs.size() / 2 - 1].first;
-                    threshold /= 2;
-                }
+                threshold = 0;
+                // threshold = pairs[pairs.size() / 2].first;
+                // if (pairs.size() % 2 == 0) {
+                //     threshold += pairs[pairs.size() / 2 - 1].first;
+                //     threshold /= 2;
+                // }
                 break;
             case SplitType::Best:
                 if (num == 0) {
-                    std::sort(pairs.begin(), pairs.end(), [](const auto &a, const auto &b) {
-                        return a.first < b.first;
-                    });
+                    // std::sort(pairs.begin(), pairs.end(), [](const auto &a, const auto &b) {
+                    //     return a.first < b.first;
+                    // });
                 }
                 // else assume vector is sorted
 
-                threshold = (pairs[num].first + pairs[num + 1].first) / 2;
+                threshold = 0;
+                // threshold = (pairs[num].first + pairs[num + 1].first) / 2;
                 break;
             }
 
@@ -86,24 +89,24 @@ namespace tree {
         Split<DType> find_split(const Column &column, const Column &target, boost::random::mt19937 &rng,
                                 std::vector<I> * indices = nullptr) {
             size_t pairs_size = (indices == nullptr) ? column.size() : indices->size();
-            PairsVector pairs(pairs_size);
+            // PairsVector pairs(pairs_size);
 
             DType min, max;
 
             if (!indices) {
                 // zip-like construction
-                for (int i = 0; i < pairs.size(); i++) {
-                    pairs[i] = { column[i], target[i] };
-                }
+                // for (int i = 0; i < pairs.size(); i++) {
+                //     pairs[i] = { column[i], target[i] };
+                // }
                 auto min_max = std::minmax_element(column.begin(), column.end());
                 min = *min_max.first;
                 max = *min_max.second;
             } else {
                 min = std::numeric_limits<DType>::max();
                 max = std::numeric_limits<DType>::min();
-                int pair_index = 0;
+                // int pair_index = 0;
                 for (int i : *indices) {
-                    pairs[pair_index++] = { column[i], target[i] };
+                    // pairs[pair_index++] = { column[i], target[i] };
                     if (column[i] < min)
                         min = column[i];
                     if (column[i] > max)
@@ -121,8 +124,9 @@ namespace tree {
 
             // std::cout << "start search(" << split_iterations << ")" << std::endl;
             for (int iter = 0; iter < split_iterations; iter++) {
-                threshold = find_threshold(pairs, min, max, iter, rng);
-                std::tie(left_value, left_impurity, right_value, right_impurity) = partialImpurity(pairs.begin(), pairs.end(), threshold);
+                threshold = find_threshold(column, target, indices, min, max, iter, rng);
+                // std::tie(left_value, left_impurity, right_value, right_impurity) = partialImpurity(pairs.begin(), pairs.end(), threshold);
+                std::tie(left_value, left_impurity, right_value, right_impurity) = partialImpurity(column, target, indices, threshold);
                 // variance is multiplied by number of "left" elements
                 DType impurity = left_impurity + right_impurity;
 
