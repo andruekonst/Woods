@@ -93,8 +93,12 @@ namespace tree {
                 0,           // size_t feature; // dummy value here
                 threshold,   // DType  threshold;
                 impurity,    // DType  impurity;
-                left_value,  // DType  left_value;
-                right_value, // DType  right_value
+                // left_value,  // DType  left_value;
+                // right_value, // DType  right_value
+                {
+                    left_value, // index 0
+                    right_value // index 1
+                }
             };
         }
 
@@ -151,11 +155,12 @@ namespace tree {
             split_info = bestSplit;
         }
 
-        virtual Column predict_impl(const Matrix &columns) { // override {
+        virtual Column predict_impl(const Matrix &columns) {
             Column predictions(columns[0].size());
             for (int i = 0; i < predictions.size(); i++) {
-                predictions[i] = (columns[split_info.feature][i] <= split_info.threshold) ?
-                                    split_info.left_value : split_info.right_value;
+                // predictions[i] = (columns[split_info.feature][i] <= split_info.threshold) ?
+                //                     split_info.left_value : split_info.right_value;
+                predictions[i] = split_info.values[(columns[split_info.feature][i] > split_info.threshold)];
             }
             return predictions;
         }

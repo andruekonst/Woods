@@ -9,6 +9,7 @@
 #include <tree/rule.hpp>
 #include <vector>
 #include <unordered_map>
+#include <array>
 #include <boost/python.hpp>
 #include <boost/random.hpp>
 
@@ -36,6 +37,8 @@ namespace tree {
         std::vector<Splitter> splitters;
         std::unordered_map<int, int> route_left;
         std::unordered_map<int, int> route_right;
+
+        std::array<std::vector<int>, 2> routes;
 
         // parameters
         int depth = 1;
@@ -72,8 +75,6 @@ namespace tree {
             // std::cout << "New node on inverted depth(" << inv_depth << ") = " << left_right.first.size() << " : " << left_right.second.size() << std::endl;
             TreeNode<Splitter> * node = new TreeNode<Splitter>;
             node->value = splitter;
-            // node->left = make_node(left_right.first.first, left_right.first.second, left_seed, inv_depth - 1);
-            // node->right = make_node(left_right.second.first, left_right.second.second, right_seed, inv_depth - 1);
             node->left = make_node<I>(columns, target, left_seed, inv_depth - 1, left_right.first, false);
             node->right = make_node<I>(columns, target, right_seed, inv_depth - 1, left_right.second, false);
 
@@ -93,22 +94,15 @@ namespace tree {
                 return -1;
             splitters.push_back(node->value);
             int index = static_cast<int>(splitters.size() - 1);
-            // std::cout << "Push splitter[" << index << "] = " << node->value.split_info.threshold << std::endl;
             int left_index = flatten_tree(node->left);
             int right_index = flatten_tree(node->right);
-            // route_left.push_back(left_index);
-            // route_right.push_back(right_index);
             route_left[index] = left_index;
             route_right[index] = right_index;
-            // std::cout << "  splitter[" << index << "]: " << left_index << " " << right_index << std::endl;
             return index;
         }
 
         void fit_impl(const Matrix &columns, const Column &target, const unsigned random_seed) { // override {
             const size_t n_features = columns.size();
-            // splitters.push_back(GreedyDecisionRule<DType, type, PartialImpurity>());
-            // splitters.back().fit_impl(columns, target, seed);
-            // auto split = splitters.back().split_info;
             using Ind = short;
 
             if (tree)
@@ -122,30 +116,35 @@ namespace tree {
 
             flatten_tree(tree);
             clean_node(tree);
+
+            routes[0].resize(route_left.size());
+            routes[1].resize(route_right.size());
+            std::fill(routes[0].begin(), routes[0].end(), -1);
+            std::fill(routes[1].begin(), routes[1].end(), -1);
+            for (auto &p : route_left) {
+                routes[0][p.first] = p.second;
+            }
+            for (auto &p : route_right) {
+                routes[1][p.first] = p.second;
+            }
+            route_left.clear();
+            route_right.clear();
+
             tree = nullptr;
         }
 
-        virtual Column predict_impl(const Matrix &columns) { // override {
-            // return splitters.back().predict_impl(columns);
+        virtual Column predict_impl(const Matrix &columns) {
             Column predictions(columns[0].size());
             for (int i = 0; i < predictions.size(); i++) {
-                // TreeNode<Splitter> * cur = tree;
                 int cur = 0;
                 DType val;
                 // std::cout << "Predict " << i << ": " << std::endl;
                 do {
                     auto &split_info = splitters[cur].split_info;
                     // std::cout << "  " << cur << ": " << split_info.feature << " / " << split_info.threshold << std::endl;
-                    // auto &split_info = cur->value.split_info;
-                    if (columns[split_info.feature][i] <= split_info.threshold) {
-                        // cur = cur->left;
-                        cur = route_left[cur];
-                        val = split_info.left_value;
-                    } else {
-                        // cur = cur->right;
-                        cur = route_right[cur];
-                        val = split_info.right_value;
-                    }
+                    bool cond = columns[split_info.feature][i] > split_info.threshold;
+                    cur = routes[cond][cur];
+                    val = split_info.values[cond];
                     // std::cout << cur << std::endl;
                 } while (cur > 0);
                 predictions[i] = val;

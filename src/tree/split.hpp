@@ -13,8 +13,9 @@ namespace tree {
         size_t feature;
         DType  threshold;
         DType  impurity;
-        DType  left_value;
-        DType  right_value;
+        // DType  left_value;
+        // DType  right_value;
+        DType values[2]; // 0 - left, 1 - right
     };
 
 } // namespace tree
