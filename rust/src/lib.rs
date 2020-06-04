@@ -6,7 +6,9 @@ use pyo3::wrap_pyfunction;
 use std::vec;
 
 mod rule;
+mod tree;
 use crate::rule::DecisionRuleImpl;
+use crate::tree::{TreeParameters, DecisionTreeImpl};
 
 type DType = f64;
 
@@ -40,9 +42,36 @@ impl DecisionRule {
         let features = to_columns(x);
         self.rule.predict(features.view()).into_pyarray(py).to_owned()
     }
+}
 
-    fn test(&self) -> PyResult<String> {
-        Ok(self.rule.test().unwrap())
+#[pyclass(module="woods")]
+pub struct DecisionTree {
+    tree: DecisionTreeImpl<DecisionRuleImpl>
+}
+
+#[pymethods]
+impl DecisionTree {
+    #[new]
+    fn new(depth: u8, min_samples_split: usize) -> Self {
+        let params = TreeParameters {
+            depth: depth,
+            min_samples_split: min_samples_split
+        };
+        DecisionTree {
+            tree: DecisionTreeImpl::new(params)
+        }
+    }
+    
+    fn fit(&mut self, x: &PyArray2<DType>, y: &PyArray1<DType>) {
+        let features = to_columns(x);
+        let target = y.as_array();
+        assert_eq!(features.dim().1, target.dim());
+        self.tree.fit(features.view(), target);
+    }
+
+    fn predict(&self, py: Python<'_>, x: &PyArray2<DType>) -> Py<PyArray1<DType>> {
+        let features = to_columns(x);
+        self.tree.predict(features.view()).into_pyarray(py).to_owned()
     }
 }
 
@@ -83,6 +112,7 @@ fn woods(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     type NumberType = f64;
 
     m.add_class::<DecisionRule>()?;
+    m.add_class::<DecisionTree>()?;
 
     Ok(())
 }

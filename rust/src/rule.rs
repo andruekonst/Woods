@@ -5,7 +5,7 @@ use rand::Rng;
 use rand::distributions::Uniform;
 use average::Variance;
 
-type D = f64;
+pub type D = f64;
 
 #[derive(PartialEq,PartialOrd)]
 struct NonNan(D);
@@ -117,7 +117,8 @@ fn find_split<'a, 'b>(column: &'a ArrayView1<'_, D>, target: &ArrayView1<'_, D>,
         k.0 > threshold
     }).map(|k| *k.1).collect();
 
-    let impurity = left.error() * (left.len() as D) + right.error() * (right.len() as D);
+    // let impurity = left.error() * (left.len() as D) + right.error() * (right.len() as D);
+    let impurity = left.sample_variance() * (left.len() as D) + right.sample_variance() * (right.len() as D);
     
     Some(Split {
         feature: id,
@@ -146,22 +147,15 @@ impl DecisionRuleImpl {
     }
 
     pub fn fit(&mut self, columns: ArrayView2<'_, D>, target: ArrayView1<'_, D>) {
-        println!("Fit:)");
-        println!("Number of features: {}; number of samples: {}", columns.dim().0, target.dim());
+        // println!("Number of features: {}; number of samples: {}", columns.dim().0, target.dim());
         self.fit_by_indices(columns, target, None);
     }
 
     pub fn predict(&self, columns: ArrayView2<'_, D>) -> Array1<D> {
-        // let predictions = Array1::zeros(columns.dim().1);
-        // predictions
         columns.row(self.split_info.as_ref().unwrap().feature).iter().map(|val| {
             let cond = *val > self.split_info.as_ref().unwrap().threshold;
             let index = cond as usize;
             self.split_info.as_ref().unwrap().values[index]
         }).collect::<Array1<D>>()
-    }
-
-    pub fn test(&self) -> Result<String, ()> {
-        Ok("Test text".to_owned())
     }
 }
