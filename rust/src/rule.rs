@@ -86,16 +86,17 @@ impl<'a, 'b, 'c> WithIndexIter<'a, 'b, 'c> for ArrayView1<'c, D> {
 }
 
 
-#[derive(Default)]
-struct Split {
-    feature: usize,
-    threshold: D,
-    impurity: D,
-    values: [D; 2]
+#[derive(Default, Debug)]
+pub struct Split {
+    pub feature: usize,
+    pub threshold: D,
+    pub impurity: D,
+    pub values: [D; 2]
 }
 
+#[derive(Debug)]
 pub struct DecisionRuleImpl {
-    split_info: Option<Split>
+    pub split_info: Option<Split>
 }
 
 fn find_split<'a, 'b>(column: &'a ArrayView1<'_, D>, target: &ArrayView1<'_, D>, indices: Option<&'b Vec<usize>>, id: usize) -> Option<Split> {
@@ -109,16 +110,20 @@ fn find_split<'a, 'b>(column: &'a ArrayView1<'_, D>, target: &ArrayView1<'_, D>,
         min
     };
 
-    let left: Variance = column.iter_with_index(indices).zip(target).filter(|k| {
+    let left: Variance = column.iter_with_index(indices)
+                               .zip(target.iter_with_index(indices))
+                               .filter(|k| {
         k.0 <= threshold
-    }).map(|k| *k.1).collect();
+    }).map(|k| k.1).collect();
 
-    let right: Variance = column.iter_with_index(indices).zip(target).filter(|k| {
+    let right: Variance = column.iter_with_index(indices)
+                                .zip(target.iter_with_index(indices))
+                                .filter(|k| {
         k.0 > threshold
-    }).map(|k| *k.1).collect();
+    }).map(|k| k.1).collect();
 
     // let impurity = left.error() * (left.len() as D) + right.error() * (right.len() as D);
-    let impurity = left.sample_variance() * (left.len() as D) + right.sample_variance() * (right.len() as D);
+    let impurity = left.population_variance() * (left.len() as D) + right.population_variance() * (right.len() as D);
     
     Some(Split {
         feature: id,
@@ -128,6 +133,22 @@ fn find_split<'a, 'b>(column: &'a ArrayView1<'_, D>, target: &ArrayView1<'_, D>,
     })
 }
 
+// trait SplittingRule {
+//     fn new() -> Self;
+//     fn fit_by_indices(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>,
+//                       indices: Option<&Vec<usize>>);
+//     fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>);
+//     fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D>;
+// }
+
+type Indices = Vec<usize>;
+
+#[derive(Default)]
+pub struct SplitIndices {
+    pub left: Indices,
+    pub right: Indices,
+}
+
 impl DecisionRuleImpl {
     pub fn new() -> Self {
         DecisionRuleImpl {
@@ -135,27 +156,53 @@ impl DecisionRuleImpl {
         }
     }
 
-    fn fit_by_indices(&mut self, columns: ArrayView2<'_, D>, target: ArrayView1<'_, D>,
-                      indices: Option<&Vec<usize>>) {
+    pub fn fit_by_indices(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>,
+                      indices: Option<&Vec<usize>>) -> Option<()> {
         self.split_info = columns.outer_iter().enumerate().map(move |col| {
             find_split(&col.1, &target, indices, col.0)
         }).filter(|opt| {
             opt.is_some()
         }).min_by_key(|split| {
             NonNan::new(split.as_ref().unwrap().impurity).unwrap()
-        }).unwrap();
+        })?;
+        Some(())
     }
 
-    pub fn fit(&mut self, columns: ArrayView2<'_, D>, target: ArrayView1<'_, D>) {
+    pub fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
         // println!("Number of features: {}; number of samples: {}", columns.dim().0, target.dim());
         self.fit_by_indices(columns, target, None);
     }
 
-    pub fn predict(&self, columns: ArrayView2<'_, D>) -> Array1<D> {
+    pub fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
         columns.row(self.split_info.as_ref().unwrap().feature).iter().map(|val| {
             let cond = *val > self.split_info.as_ref().unwrap().threshold;
             let index = cond as usize;
             self.split_info.as_ref().unwrap().values[index]
         }).collect::<Array1<D>>()
+    }
+
+    pub fn split_indices(&self, columns: &ArrayView2<'_, D>, _target: &ArrayView1<'_, D>,
+                         indices: Option<&Vec<usize>>) -> SplitIndices {
+        let mut result = SplitIndices::default();
+        let split_info = self.split_info.as_ref().unwrap();
+        let column = columns.row(split_info.feature);
+        if let Some(ind) = indices {
+            for (value, id) in column.iter_with_index(indices).zip(ind) {
+                if value <= split_info.threshold {
+                    result.left.push(*id);
+                } else {
+                    result.right.push(*id);
+                }
+            }
+        } else {
+            for (value, id) in column.iter().zip(0..) {
+                if *value <= split_info.threshold {
+                    result.left.push(id);
+                } else {
+                    result.right.push(id);
+                }
+            }
+        }
+        result
     }
 }

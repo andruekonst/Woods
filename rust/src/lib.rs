@@ -35,12 +35,12 @@ impl DecisionRule {
         let features = to_columns(x);
         let target = y.as_array();
         assert_eq!(features.dim().1, target.dim());
-        self.rule.fit(features.view(), target);
+        self.rule.fit(&features.view(), &target);
     }
 
     fn predict(&self, py: Python<'_>, x: &PyArray2<DType>) -> Py<PyArray1<DType>> {
         let features = to_columns(x);
-        self.rule.predict(features.view()).into_pyarray(py).to_owned()
+        self.rule.predict(&features.view()).into_pyarray(py).to_owned()
     }
 }
 
@@ -66,12 +66,12 @@ impl DecisionTree {
         let features = to_columns(x);
         let target = y.as_array();
         assert_eq!(features.dim().1, target.dim());
-        self.tree.fit(features.view(), target);
+        self.tree.fit(&features.view(), &target);
     }
 
     fn predict(&self, py: Python<'_>, x: &PyArray2<DType>) -> Py<PyArray1<DType>> {
         let features = to_columns(x);
-        self.tree.predict(features.view()).into_pyarray(py).to_owned()
+        self.tree.predict(&features.view()).into_pyarray(py).to_owned()
     }
 }
 
