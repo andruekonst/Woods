@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use rand;
 use rand::Rng;
 use rand::distributions::Uniform;
-use average::Mean;
+use average::Variance;
 
 type D = f64;
 
@@ -26,6 +26,18 @@ impl Eq for NonNan {}
 impl Ord for NonNan {
     fn cmp(&self, other: &NonNan) -> Ordering {
         self.partial_cmp(other).unwrap()
+    }
+}
+
+impl From<D> for NonNan {
+    fn from(item: D) -> Self {
+        NonNan::new(item).unwrap()
+    }
+}
+
+impl Into<D> for NonNan {
+    fn into(self) -> D {
+        self.0
     }
 }
 
@@ -57,14 +69,17 @@ impl<'a, 'b, 'c> Iterator for ArrayIndexIter<'a, 'b, 'c> {
 }
 
 trait WithIndexIter<'a, 'b, 'c> {
-    fn iter_with_index(&'a self, it: Option<IndexIterator<'b>>) -> ArrayIndexIter<'a, 'b, 'c>;
+    fn iter_with_index(&'a self, v: Option<&'b Vec<usize>>) -> ArrayIndexIter<'a, 'b, 'c>;
 }
 
 impl<'a, 'b, 'c> WithIndexIter<'a, 'b, 'c> for ArrayView1<'c, D> {
-    fn iter_with_index(&'a self, it: Option<IndexIterator<'b>>) -> ArrayIndexIter<'a, 'b, 'c> {
+    fn iter_with_index(&'a self, v: Option<&'b Vec<usize>>) -> ArrayIndexIter<'a, 'b, 'c> {
         ArrayIndexIter {
             array_ref: self,
-            index_iter: it,
+            index_iter: match &v {
+                None => None,
+                Some(it) => Some(it.iter()),
+            },
             count: 0,
         }
     }
@@ -83,25 +98,9 @@ pub struct DecisionRuleImpl {
     split_info: Option<Split>
 }
 
-fn find_split<'a, 'b>(column: &'a ArrayView1<'_, D>, target: &ArrayView1<'_, D>, indices: Option<&'b Vec<usize>>, id: usize) -> Split {
-    let cur_it = column.iter_with_index(Some(indices.unwrap().iter()));
-    cur_it.map(|el| {
-        println!("Element: {}", el);
-    }).count();
-    match indices {
-        None => {},
-        Some(ind) => {
-            let sum: D = column.iter_with_index(Some(ind.iter())).sum();
-            println!("Sum: {}", sum);
-            panic!("Indices processing is not implemented");
-        },
-    }
-    let min = *column.iter().min_by_key(|&k| {
-        NonNan::new(*k).unwrap()
-    }).unwrap();
-    let max = *column.iter().max_by_key(|&k| {
-        NonNan::new(*k).unwrap()
-    }).unwrap();
+fn find_split<'a, 'b>(column: &'a ArrayView1<'_, D>, target: &ArrayView1<'_, D>, indices: Option<&'b Vec<usize>>, id: usize) -> Option<Split> {
+    let min: D = column.iter_with_index(indices).map(NonNan::from).min().map(NonNan::into)?;
+    let max: D = column.iter_with_index(indices).map(NonNan::from).max().map(NonNan::into)?;
     let mut rng = rand::thread_rng();
     // println!("Min: {}, max: {}", min, max);
     let threshold: D = if min < max {
@@ -110,41 +109,22 @@ fn find_split<'a, 'b>(column: &'a ArrayView1<'_, D>, target: &ArrayView1<'_, D>,
         min
     };
 
-    let left = column.iter().zip(target).filter(|k| {
-        k.0 <= &threshold
-    }).map(|k| {
-        k.1
-    }).collect::<Mean>().mean();
-    let right = column.iter().zip(target).filter(|k| {
-        k.0 > &threshold
-    }).map(|k| {
-        k.1
-    }).collect::<Mean>().mean();
-    // let threshold = (*min + *max) / 2.0;
-    println!("Left: {}, right: {}, threshold: {}", left, right, threshold);
+    let left: Variance = column.iter_with_index(indices).zip(target).filter(|k| {
+        k.0 <= threshold
+    }).map(|k| *k.1).collect();
 
-    let left_impurity: D = column.iter().zip(target).filter(|k| {
-        k.0 <= &threshold
-    }).map(|k| {
-        let t = k.1 - left;
-        t * t
-    }).sum();
+    let right: Variance = column.iter_with_index(indices).zip(target).filter(|k| {
+        k.0 > threshold
+    }).map(|k| *k.1).collect();
 
-    let right_impurity: D = column.iter().zip(target).filter(|k| {
-        k.0 > &threshold
-    }).map(|k| {
-        let t = k.1 - right;
-        t * t
-    }).sum();
-
-    let impurity = left_impurity + right_impurity;
+    let impurity = left.error() * (left.len() as D) + right.error() * (right.len() as D);
     
-    Split {
+    Some(Split {
         feature: id,
         threshold: threshold,
         impurity: impurity,
-        values: [left, right]
-    }
+        values: [left.mean(), right.mean()]
+    })
 }
 
 impl DecisionRuleImpl {
@@ -156,21 +136,13 @@ impl DecisionRuleImpl {
 
     fn fit_by_indices(&mut self, columns: ArrayView2<'_, D>, target: ArrayView1<'_, D>,
                       indices: Option<&Vec<usize>>) {
-        // let n_features = columns.dim().0;
-        // let bestSplit = Split::new();
-        // for j in 0..n_features {
-        //     let current = find_split(columns.slice(s![j, ..]),
-        //                              target,
-        //                              indices);
-        // }
-
-        let test: Vec<usize> = vec![1, 2, 3];
-        find_split(&columns.row(0), &target, Some(&test), 0);
-        // self.split_info = Some(columns.outer_iter().enumerate().map(move |col| {
-        //     find_split(&col.1, &target, indices, col.0)
-        // }).min_by_key(|split| {
-        //     NonNan::new(split.impurity).unwrap()
-        // }).unwrap());
+        self.split_info = columns.outer_iter().enumerate().map(move |col| {
+            find_split(&col.1, &target, indices, col.0)
+        }).filter(|opt| {
+            opt.is_some()
+        }).min_by_key(|split| {
+            NonNan::new(split.as_ref().unwrap().impurity).unwrap()
+        }).unwrap();
     }
 
     pub fn fit(&mut self, columns: ArrayView2<'_, D>, target: ArrayView1<'_, D>) {
