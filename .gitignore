@@ -2,3 +2,7 @@ build/*
 .vscode/*
 dist/*
 woods.egg-info/*
+rust/target/*
+rust/dist/*
+rust/woods.egg-info/*
+rust/Cargo.lock
