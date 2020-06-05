@@ -1,4 +1,4 @@
-use ndarray::{ArrayView2, ArrayView1, Array1, Array, Axis};
+use ndarray::{ArrayView2, ArrayView1, Array1};
 use average::Mean;
 use crate::rule::{DecisionRuleImpl, D};
 use crate::tree::{TreeParameters, DecisionTreeImpl};

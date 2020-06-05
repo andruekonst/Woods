@@ -1,4 +1,4 @@
-use ndarray::{ArrayView2, ArrayView1, Array1, Array, Axis};
+use ndarray::{ArrayView2, ArrayView1, Array1, Axis};
 use crate::rule::{DecisionRuleImpl, D};
 use std::rc::Rc;
 use serde::{Serialize, Deserialize};
@@ -85,7 +85,7 @@ impl DecisionTreeImpl<DecisionRuleImpl> {
         // }).collect::<Array1<D>>()
         columns.axis_iter(Axis(1)).map(|features| {
             let mut cur: i64 = 0;
-            let mut val = D::default();
+            let mut val;
             loop {
                 let split_info = self.splitters[cur as usize].split_info.as_ref().unwrap();
                 let cond: bool = features[split_info.feature] > split_info.threshold;

@@ -2,8 +2,6 @@
 use ndarray::{ArrayD, ArrayViewD, ArrayViewMutD, ArrayView2, Array2};
 use numpy::{IntoPyArray, PyArrayDyn, PyArray2, PyArray1};
 use pyo3::prelude::{pymodule, Py, PyModule, PyResult, Python, pyclass, pymethods, PyObject, PyErr};
-use pyo3::wrap_pyfunction;
-use std::vec;
 
 mod rule;
 mod tree;
@@ -15,8 +13,10 @@ use crate::boosting::{GradientBoostingParameters, GradientBoostingImpl, TreeGBM}
 use crate::deep_boosting::{DeepBoostingParameters, DeepBoostingImpl, AverageEnsemble};
 use std::rc::Rc;
 use std::fs::File;
-use serde::{Serialize, Deserialize};
+use serde::Serialize;
 use serde::de::DeserializeOwned;
+use std::fmt;
+use pyo3::exceptions;
 
 type DType = f64;
 
@@ -52,15 +52,68 @@ impl DecisionRule {
     }
 }
 
-fn save<T: Serialize>(what: &T, filename: &str) -> PyResult<()> {
-    let mut file = File::create(filename)?;
-    serde_json::to_writer(file, what).unwrap();
+#[derive(Debug, Clone)]
+struct UnknownFormatError {
+    pub format: String,
+}
+
+impl UnknownFormatError {
+    fn new(format: &str) -> Self {
+        UnknownFormatError {
+            format: format.into()
+        }
+    }
+}
+
+const SERIALIZATION_FORMATS: &[&str; 2] = &["json", "bincode"];
+
+impl fmt::Display for UnknownFormatError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Incorrect format: `{}`. Please, use one of: {:?}",
+               self.format,
+               SERIALIZATION_FORMATS)
+    }
+}
+
+impl Into<PyErr> for UnknownFormatError {
+    fn into(self) -> PyErr {
+        PyErr::new::<exceptions::ValueError, _>(self.to_string())
+    }
+}
+
+fn save<T: Serialize>(what: &T, filename: &str, format: Option<&str>) -> PyResult<()> {
+    let file = File::create(filename)?;
+    let f = format.unwrap_or("json");
+    match f {
+        "json" => serde_json::to_writer(file, what).unwrap(),
+        "bincode" => bincode::serialize_into(file, what).unwrap(),
+        _ => {
+            if SERIALIZATION_FORMATS.contains(&f) {
+                unimplemented!("Format `{}` serialization", f);
+            }
+            return Err(UnknownFormatError::new(f).into());
+        }
+    }
     Ok(())
 }
 
-fn load<T: DeserializeOwned>(what: &mut T, filename: &str) -> PyResult<()> {
+fn load<T: DeserializeOwned>(what: &mut T, filename: &str, format: Option<&str>) -> PyResult<()> {
     let file = File::open(filename)?;
-    *what = serde_json::from_reader::<_, T>(file).unwrap();
+    let f = format.unwrap_or("json");
+     match f {
+        "json" => {
+            *what = serde_json::from_reader::<_, T>(file).unwrap();
+        },
+        "bincode" => {
+            *what = bincode::deserialize_from::<_, T>(file).unwrap();
+        },
+        _ => {
+            if SERIALIZATION_FORMATS.contains(&f) {
+                unimplemented!("Format `{}` deserialization", f);
+            }
+            return Err(UnknownFormatError::new(f).into());
+        }
+    };
     Ok(())
 }
 
@@ -91,12 +144,12 @@ impl DecisionTree {
         self.tree.predict(&features.view()).into_pyarray(py).to_owned()
     }
 
-    fn save(&self, filename: &str) -> PyResult<()> {
-        save(&self.tree, filename)
+    fn save(&self, filename: &str, format: Option<&str>) -> PyResult<()> {
+        save(&self.tree, filename, format)
     }
 
-    fn load(&mut self, filename: &str) -> PyResult<()> {
-        load(&mut self.tree, filename)
+    fn load(&mut self, filename: &str, format: Option<&str>) -> PyResult<()> {
+        load(&mut self.tree, filename, format)
     }
 }
 
@@ -129,12 +182,12 @@ impl GradientBoosting {
         self.gbm.predict(&features.view()).into_pyarray(py).to_owned()
     }
 
-    fn save(&self, filename: &str) -> PyResult<()> {
-        save(&self.gbm, filename)
+    fn save(&self, filename: &str, format: Option<&str>) -> PyResult<()> {
+        save(&self.gbm, filename, format)
     }
 
-    fn load(&mut self, filename: &str) -> PyResult<()> {
-        load(&mut self.gbm, filename)
+    fn load(&mut self, filename: &str, format: Option<&str>) -> PyResult<()> {
+        load(&mut self.gbm, filename, format)
     }
 }
 
@@ -165,12 +218,12 @@ impl DeepGradientBoosting {
         self.dgbm.predict(&features.view()).into_pyarray(py).to_owned()
     }
 
-    fn save(&self, filename: &str) -> PyResult<()> {
-        save(&self.dgbm, filename)
+    fn save(&self, filename: &str, format: Option<&str>) -> PyResult<()> {
+        save(&self.dgbm, filename, format)
     }
 
-    fn load(&mut self, filename: &str) -> PyResult<()> {
-        load(&mut self.dgbm, filename)
+    fn load(&mut self, filename: &str, format: Option<&str>) -> PyResult<()> {
+        load(&mut self.dgbm, filename, format)
     }
 }
 
@@ -207,8 +260,6 @@ fn woods(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
         mult(a, x);
         Ok(())
     }
-
-    type NumberType = f64;
 
     m.add_class::<DecisionRule>()?;
     m.add_class::<DecisionTree>()?;

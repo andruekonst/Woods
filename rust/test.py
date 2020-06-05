@@ -163,13 +163,13 @@ for j in range(n_experiments):
     cb_times.append(end - start)
 print(f"    {np.mean(cb_times)} +- {np.std(cb_times)}")
 
-cb_filename = os.path.join(models_dir, "test_cb.json")
+cb_filename = os.path.join(models_dir, "test_cb.bin")
 print(f"Check DeepGradientBoosting.save({cb_filename})")
-cb.save(cb_filename)
+cb.save(cb_filename, format='bincode')
 
 print(f"Check DeepGradientBoosting.load('{cb_filename}')")
 loaded_cb = woods.DeepGradientBoosting()
-loaded_cb.load(cb_filename)
+loaded_cb.load(cb_filename, format='bincode')
 print("  best loaded deep gbm predictions:")
 print("    ", mean_squared_error(y_test, loaded_cb.predict(X_test)))
 

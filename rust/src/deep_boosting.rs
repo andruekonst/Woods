@@ -1,4 +1,4 @@
-use ndarray::{ArrayView2, ArrayView1, Array1, Array, Axis, Array2, stack, Slice};
+use ndarray::{ArrayView2, ArrayView1, Array1, Axis, Array2, stack, Slice};
 use crate::rule::{D, NonNan};
 use crate::tree::TreeParameters;
 use crate::boosting::{GradientBoostingImpl, GradientBoostingParameters, TreeGBM};

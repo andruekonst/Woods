@@ -1,8 +1,8 @@
-use ndarray::{ArrayView2, ArrayView1, Array1, Array, Axis};
+use ndarray::{ArrayView2, ArrayView1, Array1};
 use std::cmp::Ordering;
 use rand;
 use rand::Rng;
-use rand::distributions::Uniform;
+// use rand::distributions::Uniform;
 use average::Variance;
 // use ndarray::parallel::prelude::*;
 use serde::{Serialize, Deserialize};
