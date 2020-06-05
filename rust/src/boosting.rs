@@ -10,6 +10,19 @@ pub struct GradientBoostingParameters<EstParams> {
     pub learning_rate: D,
 }
 
+const DEFAULT_GBM_N_ESTIMATORS: u32 = 100u32;
+const DEFAULT_GBM_LEARNING_RATE: D = 0.1 as D;
+
+impl<E> GradientBoostingParameters<E> {
+    pub fn new(est_params: E, n_estimators: Option<u32>, learning_rate: Option<D>) -> Self {
+        GradientBoostingParameters {
+            est_params: Rc::new(est_params),
+            n_estimators: n_estimators.unwrap_or(DEFAULT_GBM_N_ESTIMATORS),
+            learning_rate: learning_rate.unwrap_or(DEFAULT_GBM_LEARNING_RATE),
+        }
+    }
+}
+
 pub struct GradientBoostingImpl<Est, EstParams> {
     params: GradientBoostingParameters<EstParams>,
     estimators: Vec<Est>,

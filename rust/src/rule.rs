@@ -1,9 +1,11 @@
-use ndarray::{ArrayView2, ArrayView1, Array1, Array};
+use ndarray::{ArrayView2, ArrayView1, Array1, Array, Axis};
 use std::cmp::Ordering;
 use rand;
 use rand::Rng;
 use rand::distributions::Uniform;
 use average::Variance;
+// use ndarray::parallel::prelude::*;
+use serde::{Serialize, Deserialize};
 
 pub type D = f64;
 
@@ -86,7 +88,7 @@ impl<'a, 'b, 'c> WithIndexIter<'a, 'b, 'c> for ArrayView1<'c, D> {
 }
 
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Split {
     pub feature: usize,
     pub threshold: D,
@@ -94,7 +96,7 @@ pub struct Split {
     pub values: [D; 2]
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DecisionRuleImpl {
     pub split_info: Option<Split>
 }
@@ -159,6 +161,7 @@ impl DecisionRuleImpl {
 
     pub fn fit_by_indices(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>,
                       indices: Option<&Vec<usize>>) -> Option<()> {
+        // self.split_info = columns.outer_iter().into_par_iter().enumerate().map(move |col| {
         self.split_info = columns.outer_iter().enumerate().map(move |col| {
             find_split(&col.1, &target, indices, col.0)
         }).filter(|opt| {

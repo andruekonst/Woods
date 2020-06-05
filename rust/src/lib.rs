@@ -1,7 +1,7 @@
 #![deny(rust_2018_idioms)]
 use ndarray::{ArrayD, ArrayViewD, ArrayViewMutD, ArrayView2, Array2};
 use numpy::{IntoPyArray, PyArrayDyn, PyArray2, PyArray1};
-use pyo3::prelude::{pymodule, Py, PyModule, PyResult, Python, pyclass, pymethods, PyObject};
+use pyo3::prelude::{pymodule, Py, PyModule, PyResult, Python, pyclass, pymethods, PyObject, PyErr};
 use pyo3::wrap_pyfunction;
 use std::vec;
 
@@ -12,6 +12,7 @@ use crate::rule::DecisionRuleImpl;
 use crate::tree::{TreeParameters, DecisionTreeImpl};
 use crate::boosting::{GradientBoostingParameters, GradientBoostingImpl};
 use std::rc::Rc;
+use std::fs::File;
 
 type DType = f64;
 
@@ -55,11 +56,8 @@ pub struct DecisionTree {
 #[pymethods]
 impl DecisionTree {
     #[new]
-    fn new(depth: u8, min_samples_split: usize) -> Self {
-        let params = TreeParameters {
-            depth: depth,
-            min_samples_split: min_samples_split
-        };
+    fn new(depth: Option<u8>, min_samples_split: Option<usize>) -> Self {
+        let params = TreeParameters::new(depth, min_samples_split);
         DecisionTree {
             tree: DecisionTreeImpl::new(Rc::new(params))
         }
@@ -76,6 +74,19 @@ impl DecisionTree {
         let features = to_columns(x);
         self.tree.predict(&features.view()).into_pyarray(py).to_owned()
     }
+
+    fn save(&self, filename: &str) -> PyResult<()> {
+        let mut file = File::create(filename)?;
+        serde_json::to_writer(file, &self.tree).unwrap();
+        // println!("JSON: {}", serde_json::to_string(&self.tree).unwrap());
+        Ok(())
+    }
+
+    fn load(&mut self, filename: &str) -> PyResult<()> {
+        let file = File::open(filename)?;
+        self.tree = serde_json::from_reader(file).unwrap();
+        Ok(())
+    }
 }
 
 #[pyclass(module="woods")]
@@ -86,17 +97,10 @@ pub struct GradientBoosting {
 #[pymethods]
 impl GradientBoosting {
     #[new]
-    fn new(depth: u8, min_samples_split: usize, n_estimators: u32,
-           learning_rate: DType) -> Self {
-        let est_params = TreeParameters {
-            depth: depth,
-            min_samples_split: min_samples_split
-        };
-        let params = GradientBoostingParameters {
-            est_params: Rc::new(est_params),
-            n_estimators: n_estimators,
-            learning_rate: learning_rate,
-        };
+    fn new(depth: Option<u8>, min_samples_split: Option<usize>, n_estimators: Option<u32>,
+           learning_rate: Option<DType>) -> Self {
+        let est_params = TreeParameters::new(depth, min_samples_split);
+        let params = GradientBoostingParameters::new(est_params, n_estimators, learning_rate);
         GradientBoosting {
             gbm: GradientBoostingImpl::new(params)
         }

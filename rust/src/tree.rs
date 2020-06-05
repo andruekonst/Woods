@@ -1,12 +1,27 @@
 use ndarray::{ArrayView2, ArrayView1, Array1, Array, Axis};
 use crate::rule::{DecisionRuleImpl, D};
 use std::rc::Rc;
+use serde::{Serialize, Deserialize};
 
+#[derive(Serialize, Deserialize)]
 pub struct TreeParameters {
     pub depth: u8,
     pub min_samples_split: usize,
 }
 
+const DEFAULT_TREE_DEPTH: u8 = 3u8;
+const DEFAULT_TREE_MIN_SAMPLES_SPLIT: usize = 2usize;
+
+impl TreeParameters {
+    pub fn new(depth: Option<u8>, min_samples_split: Option<usize>) -> Self {
+        TreeParameters {
+            depth: depth.unwrap_or(DEFAULT_TREE_DEPTH),
+            min_samples_split: min_samples_split.unwrap_or(DEFAULT_TREE_MIN_SAMPLES_SPLIT)
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct DecisionTreeImpl<Splitter> {
     params: Rc<TreeParameters>,
     splitters: Vec<Splitter>,
