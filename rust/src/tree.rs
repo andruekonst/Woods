@@ -1,5 +1,6 @@
 use ndarray::{ArrayView2, ArrayView1, Array1, Array, Axis};
 use crate::rule::{DecisionRuleImpl, D};
+use std::rc::Rc;
 
 pub struct TreeParameters {
     pub depth: u8,
@@ -7,13 +8,13 @@ pub struct TreeParameters {
 }
 
 pub struct DecisionTreeImpl<Splitter> {
-    params: TreeParameters,
+    params: Rc<TreeParameters>,
     splitters: Vec<Splitter>,
     routes: Vec<[i64; 2]>,
 }
 
 impl DecisionTreeImpl<DecisionRuleImpl> {
-    pub fn new(params: TreeParameters) -> Self {
+    pub fn new(params: Rc<TreeParameters>) -> Self {
         DecisionTreeImpl {
             params,
             splitters: vec![],

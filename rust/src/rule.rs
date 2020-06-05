@@ -107,7 +107,8 @@ fn find_split<'a, 'b>(column: &'a ArrayView1<'_, D>, target: &ArrayView1<'_, D>,
     let threshold: D = if min < max {
         rng.gen_range(min, max)
     } else {
-        min
+        // min
+        return None;
     };
 
     let left: Variance = column.iter_with_index(indices)
@@ -174,10 +175,11 @@ impl DecisionRuleImpl {
     }
 
     pub fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
-        columns.row(self.split_info.as_ref().unwrap().feature).iter().map(|val| {
-            let cond = *val > self.split_info.as_ref().unwrap().threshold;
+        let split_info = self.split_info.as_ref().unwrap();
+        columns.row(split_info.feature).iter().map(|val| {
+            let cond = *val > split_info.threshold;
             let index = cond as usize;
-            self.split_info.as_ref().unwrap().values[index]
+            split_info.values[index]
         }).collect::<Array1<D>>()
     }
 

@@ -7,8 +7,11 @@ use std::vec;
 
 mod rule;
 mod tree;
+mod boosting;
 use crate::rule::DecisionRuleImpl;
 use crate::tree::{TreeParameters, DecisionTreeImpl};
+use crate::boosting::{GradientBoostingParameters, GradientBoostingImpl};
+use std::rc::Rc;
 
 type DType = f64;
 
@@ -58,7 +61,7 @@ impl DecisionTree {
             min_samples_split: min_samples_split
         };
         DecisionTree {
-            tree: DecisionTreeImpl::new(params)
+            tree: DecisionTreeImpl::new(Rc::new(params))
         }
     }
     
@@ -72,6 +75,43 @@ impl DecisionTree {
     fn predict(&self, py: Python<'_>, x: &PyArray2<DType>) -> Py<PyArray1<DType>> {
         let features = to_columns(x);
         self.tree.predict(&features.view()).into_pyarray(py).to_owned()
+    }
+}
+
+#[pyclass(module="woods")]
+pub struct GradientBoosting {
+    gbm: GradientBoostingImpl<DecisionTreeImpl<DecisionRuleImpl>, TreeParameters>
+}
+
+#[pymethods]
+impl GradientBoosting {
+    #[new]
+    fn new(depth: u8, min_samples_split: usize, n_estimators: u32,
+           learning_rate: DType) -> Self {
+        let est_params = TreeParameters {
+            depth: depth,
+            min_samples_split: min_samples_split
+        };
+        let params = GradientBoostingParameters {
+            est_params: Rc::new(est_params),
+            n_estimators: n_estimators,
+            learning_rate: learning_rate,
+        };
+        GradientBoosting {
+            gbm: GradientBoostingImpl::new(params)
+        }
+    }
+    
+    fn fit(&mut self, x: &PyArray2<DType>, y: &PyArray1<DType>) {
+        let features = to_columns(x);
+        let target = y.as_array();
+        assert_eq!(features.dim().1, target.dim());
+        self.gbm.fit(&features.view(), &target);
+    }
+
+    fn predict(&self, py: Python<'_>, x: &PyArray2<DType>) -> Py<PyArray1<DType>> {
+        let features = to_columns(x);
+        self.gbm.predict(&features.view()).into_pyarray(py).to_owned()
     }
 }
 
@@ -113,6 +153,7 @@ fn woods(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
 
     m.add_class::<DecisionRule>()?;
     m.add_class::<DecisionTree>()?;
+    m.add_class::<GradientBoosting>()?;
 
     Ok(())
 }
