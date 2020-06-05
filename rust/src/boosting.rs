@@ -3,7 +3,9 @@ use average::Mean;
 use crate::rule::{DecisionRuleImpl, D};
 use crate::tree::{TreeParameters, DecisionTreeImpl};
 use std::rc::Rc;
+use serde::{Serialize, Deserialize};
 
+#[derive(Serialize, Deserialize)]
 pub struct GradientBoostingParameters<EstParams> {
     pub est_params: Rc<EstParams>,
     pub n_estimators: u32,
@@ -23,6 +25,7 @@ impl<E> GradientBoostingParameters<E> {
     }
 }
 
+#[derive(Serialize, Deserialize)]
 pub struct GradientBoostingImpl<Est, EstParams> {
     params: GradientBoostingParameters<EstParams>,
     estimators: Vec<Est>,

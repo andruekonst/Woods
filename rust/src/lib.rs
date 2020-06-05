@@ -13,6 +13,8 @@ use crate::tree::{TreeParameters, DecisionTreeImpl};
 use crate::boosting::{GradientBoostingParameters, GradientBoostingImpl};
 use std::rc::Rc;
 use std::fs::File;
+use serde::{Serialize, Deserialize};
+use serde::de::DeserializeOwned;
 
 type DType = f64;
 
@@ -48,6 +50,18 @@ impl DecisionRule {
     }
 }
 
+fn save<T: Serialize>(what: &T, filename: &str) -> PyResult<()> {
+    let mut file = File::create(filename)?;
+    serde_json::to_writer(file, what).unwrap();
+    Ok(())
+}
+
+fn load<T: DeserializeOwned>(what: &mut T, filename: &str) -> PyResult<()> {
+    let file = File::open(filename)?;
+    *what = serde_json::from_reader::<_, T>(file).unwrap();
+    Ok(())
+}
+
 #[pyclass(module="woods")]
 pub struct DecisionTree {
     tree: DecisionTreeImpl<DecisionRuleImpl>
@@ -76,16 +90,11 @@ impl DecisionTree {
     }
 
     fn save(&self, filename: &str) -> PyResult<()> {
-        let mut file = File::create(filename)?;
-        serde_json::to_writer(file, &self.tree).unwrap();
-        // println!("JSON: {}", serde_json::to_string(&self.tree).unwrap());
-        Ok(())
+        save(&self.tree, filename)
     }
 
     fn load(&mut self, filename: &str) -> PyResult<()> {
-        let file = File::open(filename)?;
-        self.tree = serde_json::from_reader(file).unwrap();
-        Ok(())
+        load(&mut self.tree, filename)
     }
 }
 
@@ -116,6 +125,14 @@ impl GradientBoosting {
     fn predict(&self, py: Python<'_>, x: &PyArray2<DType>) -> Py<PyArray1<DType>> {
         let features = to_columns(x);
         self.gbm.predict(&features.view()).into_pyarray(py).to_owned()
+    }
+
+    fn save(&self, filename: &str) -> PyResult<()> {
+        save(&self.gbm, filename)
+    }
+
+    fn load(&mut self, filename: &str) -> PyResult<()> {
+        load(&mut self.gbm, filename)
     }
 }
 
