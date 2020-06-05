@@ -1,18 +1,15 @@
-use ndarray::{ArrayView2, ArrayView1, Array1, Axis, Array2, stack, Slice};
+use ndarray::{ArrayView2, ArrayView1, Array1, Axis, Array2, stack};
 use crate::rule::{D, NonNan};
 use crate::tree::TreeParameters;
-use crate::boosting::{GradientBoostingImpl, GradientBoostingParameters, TreeGBM};
+use crate::boosting::{GradientBoostingParameters, TreeGBM};
 use std::rc::Rc;
 use serde::{Serialize, Deserialize};
-use ndarray_stats::DeviationExt;
 use itertools::iproduct;
 use rayon::prelude::*;
 use rayon::iter::ParallelBridge;
+use crate::estimator::*;
+use crate::ensemble::*;
 
-trait Estimator {
-    fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>);
-    fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D>;
-}
 
 impl Estimator for TreeGBM {
     fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
@@ -20,77 +17,6 @@ impl Estimator for TreeGBM {
     }
     fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
         self.predict(columns)
-    }
-}
-
-fn eval_est<Est: Estimator>(
-    est: &mut Est,
-    train_columns: &ArrayView2<'_, D>,
-    train_target: &ArrayView1<'_, D>,
-    val_columns: &ArrayView2<'_, D>,
-    val_target: &ArrayView1<'_, D>) -> D {
-    est.fit(train_columns, train_target);
-    let preds = est.predict(val_columns);
-    preds.mean_sq_err(val_target).unwrap() as D
-}
-
-fn eval_est_cv<Est: Estimator>(est: &mut Est, cv: u8, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) -> D {
-    let n_samples: usize = target.dim();
-    let fold_size: usize = n_samples / (cv as usize);
-    let mut res: D = D::default();
-
-    for i in 0..cv {
-        let from = fold_size * (i as usize);
-        let to = std::cmp::min(fold_size * ((i + 1) as usize), n_samples + 1);
-        let fold_columns = columns.slice_axis(Axis(1), Slice::from(from..to));
-        let fold_target = target.slice_axis(Axis(0), Slice::from(from..to));
-        if i > 0 {
-            let val_columns = columns.slice_axis(Axis(1), Slice::from(0..from));
-            let val_target = target.slice_axis(Axis(0), Slice::from(0..from));
-            res += eval_est(est, &fold_columns, &fold_target, &val_columns, &val_target);
-        }
-        if i < cv - 1 {
-            let val_columns = columns.slice_axis(Axis(1), Slice::from(to..));
-            let val_target = target.slice_axis(Axis(0), Slice::from(to..));
-            res += eval_est(est, &fold_columns, &fold_target, &val_columns, &val_target);
-        }
-    }
-    // res / (cv as D)
-    res
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct AverageEnsemble<Est> {
-    estimators: Vec<Est>
-}
-
-impl AverageEnsemble<TreeGBM> {
-    fn new(width: u32, params: Rc<GradientBoostingParameters<TreeParameters>>) -> Self {
-        let estimators = (0..width).map(|_i| {
-            GradientBoostingImpl::new(Rc::clone(&params))
-        }).collect();
-        AverageEnsemble {
-            estimators: estimators,
-        }
-    }
-}
-
-impl Estimator for AverageEnsemble<TreeGBM> {
-    fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
-        for est in &mut self.estimators {
-            est.fit(columns, target);
-        }
-    }
-    fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
-        let preds = self.estimators.iter()
-                        .map(|est| est.predict(columns));
-        let mut result = Array1::zeros(columns.dim().1);
-        let alpha: D = (1.0 as D) / (self.estimators.len() as D);
-        for pred in preds {
-            result = result + pred;
-        }
-        result *= alpha;
-        result
     }
 }
 

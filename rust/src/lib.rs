@@ -3,6 +3,8 @@ use ndarray::{ArrayD, ArrayViewD, ArrayViewMutD, ArrayView2, Array2};
 use numpy::{IntoPyArray, PyArrayDyn, PyArray2, PyArray1};
 use pyo3::prelude::{pymodule, Py, PyModule, PyResult, Python, pyclass, pymethods, PyObject, PyErr};
 
+mod estimator;
+mod ensemble;
 mod rule;
 mod tree;
 mod boosting;
@@ -10,7 +12,8 @@ mod deep_boosting;
 use crate::rule::DecisionRuleImpl;
 use crate::tree::{TreeParameters, DecisionTreeImpl};
 use crate::boosting::{GradientBoostingParameters, GradientBoostingImpl, TreeGBM};
-use crate::deep_boosting::{DeepBoostingParameters, DeepBoostingImpl, AverageEnsemble};
+use crate::deep_boosting::{DeepBoostingParameters, DeepBoostingImpl};
+use crate::ensemble::AverageEnsemble;
 use std::rc::Rc;
 use std::fs::File;
 use serde::Serialize;
