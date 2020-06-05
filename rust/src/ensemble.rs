@@ -1,6 +1,6 @@
 use serde::{Serialize, Deserialize};
 use ndarray::{ArrayView2, ArrayView1, Array1};
-use crate::rule::D;
+use crate::numerics::D;
 use crate::tree::TreeParameters;
 use crate::boosting::{GradientBoostingImpl, GradientBoostingParameters, TreeGBM};
 use crate::estimator::*;

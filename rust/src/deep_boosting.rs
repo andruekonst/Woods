@@ -1,5 +1,5 @@
 use ndarray::{ArrayView2, ArrayView1, Array1, Axis, Array2, stack};
-use crate::rule::{D, NonNan};
+use crate::numerics::{D, NonNan};
 use crate::tree::TreeParameters;
 use crate::boosting::{GradientBoostingParameters, TreeGBM};
 use std::rc::Rc;
@@ -9,16 +9,6 @@ use rayon::prelude::*;
 use rayon::iter::ParallelBridge;
 use crate::estimator::*;
 use crate::ensemble::*;
-
-
-impl Estimator for TreeGBM {
-    fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
-        self.fit(columns, target);
-    }
-    fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
-        self.predict(columns)
-    }
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct DeepBoostingParameters {
@@ -77,8 +67,11 @@ impl DeepBoostingImpl<AverageEnsemble<TreeGBM>> {
             estimators: vec![],
         }
     }
+}
 
-    pub fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
+
+impl Estimator for DeepBoostingImpl<AverageEnsemble<TreeGBM>> {
+    fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
         self.estimators.clear();
 
         let mut acc_columns: Array2<D> = columns.to_owned(); // accumulated columns
@@ -110,7 +103,7 @@ impl DeepBoostingImpl<AverageEnsemble<TreeGBM>> {
         }
     }
 
-    pub fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
+    fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
         // let mut predictions: Array1<D> = Array1::zeros(columns.dim().1);
         let mut predictions: Array1<D> = self.estimators.first().unwrap().predict(columns);
         let mut acc_columns: Array2<D> = stack(Axis(0), &[columns.to_owned().view(),

@@ -1,53 +1,12 @@
 use ndarray::{ArrayView2, ArrayView1, Array1};
-use std::cmp::Ordering;
 use rand;
 use rand::Rng;
 // use rand::distributions::Uniform;
 use average::Variance;
 // use ndarray::parallel::prelude::*;
 use serde::{Serialize, Deserialize};
-
-pub type D = f64;
-
-#[derive(PartialEq,PartialOrd)]
-pub struct NonNan(D);
-
-impl NonNan {
-    pub fn new(val: D) -> Option<NonNan> {
-        Some(NonNan(val))
-        // if val.is_nan() {
-        //     None
-        // } else {
-        //     Some(NonNan(val))
-        // }
-    }
-}
-
-impl Eq for NonNan {}
-
-impl Clone for NonNan {
-    fn clone(&self) -> Self {
-        NonNan::from(self.0)
-    }
-}
-
-impl Ord for NonNan {
-    fn cmp(&self, other: &NonNan) -> Ordering {
-        self.partial_cmp(other).unwrap()
-    }
-}
-
-impl From<D> for NonNan {
-    fn from(item: D) -> Self {
-        NonNan::new(item).unwrap()
-    }
-}
-
-impl Into<D> for NonNan {
-    fn into(self) -> D {
-        self.0
-    }
-}
+use crate::numerics::{D, NonNan};
+use crate::estimator::Estimator;
 
 type IndexIterator<'a> = std::slice::Iter<'a, usize>;
 
@@ -142,13 +101,6 @@ fn find_split<'a, 'b>(column: &'a ArrayView1<'_, D>, target: &ArrayView1<'_, D>,
     })
 }
 
-// trait SplittingRule {
-//     fn new() -> Self;
-//     fn fit_by_indices(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>,
-//                       indices: Option<&Vec<usize>>);
-//     fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>);
-//     fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D>;
-// }
 
 type Indices = Vec<usize>;
 
@@ -158,14 +110,23 @@ pub struct SplitIndices {
     pub right: Indices,
 }
 
-impl DecisionRuleImpl {
-    pub fn new() -> Self {
+pub trait SplitRule {
+    fn new() -> Self;
+    fn fit_by_indices(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>,
+                      indices: Option<&Vec<usize>>) -> Option<()>;
+    fn split_indices(&self, columns: &ArrayView2<'_, D>, _target: &ArrayView1<'_, D>,
+                         indices: Option<&Vec<usize>>) -> SplitIndices;
+    fn get_split(&self) -> Option<&Split>;
+}
+
+impl SplitRule for DecisionRuleImpl {
+    fn new() -> Self {
         DecisionRuleImpl {
             split_info: None
         }
     }
 
-    pub fn fit_by_indices(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>,
+    fn fit_by_indices(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>,
                       indices: Option<&Vec<usize>>) -> Option<()> {
         // self.split_info = columns.outer_iter().into_par_iter().enumerate().map(move |col| {
         self.split_info = columns.outer_iter().enumerate().map(move |col| {
@@ -178,21 +139,7 @@ impl DecisionRuleImpl {
         Some(())
     }
 
-    pub fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
-        // println!("Number of features: {}; number of samples: {}", columns.dim().0, target.dim());
-        self.fit_by_indices(columns, target, None);
-    }
-
-    pub fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
-        let split_info = self.split_info.as_ref().unwrap();
-        columns.row(split_info.feature).iter().map(|val| {
-            let cond = *val > split_info.threshold;
-            let index = cond as usize;
-            split_info.values[index]
-        }).collect::<Array1<D>>()
-    }
-
-    pub fn split_indices(&self, columns: &ArrayView2<'_, D>, _target: &ArrayView1<'_, D>,
+    fn split_indices(&self, columns: &ArrayView2<'_, D>, _target: &ArrayView1<'_, D>,
                          indices: Option<&Vec<usize>>) -> SplitIndices {
         let mut result = SplitIndices::default();
         let split_info = self.split_info.as_ref().unwrap();
@@ -215,5 +162,25 @@ impl DecisionRuleImpl {
             }
         }
         result
+    }
+
+    fn get_split(&self) -> Option<&Split> {
+        self.split_info.as_ref()
+    }
+}
+
+impl Estimator for DecisionRuleImpl {
+    fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
+        // println!("Number of features: {}; number of samples: {}", columns.dim().0, target.dim());
+        self.fit_by_indices(columns, target, None);
+    }
+
+    fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
+        let split_info = self.split_info.as_ref().unwrap();
+        columns.row(split_info.feature).iter().map(|val| {
+            let cond = *val > split_info.threshold;
+            let index = cond as usize;
+            split_info.values[index]
+        }).collect::<Array1<D>>()
     }
 }

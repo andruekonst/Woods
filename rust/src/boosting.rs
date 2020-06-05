@@ -1,6 +1,8 @@
 use ndarray::{ArrayView2, ArrayView1, Array1};
 use average::Mean;
-use crate::rule::{DecisionRuleImpl, D};
+use crate::estimator::{Estimator, ConstructibleWithRcArg};
+use crate::rule::DecisionRuleImpl;
+use crate::numerics::D;
 use crate::tree::{TreeParameters, DecisionTreeImpl};
 use std::rc::Rc;
 use serde::{Serialize, Deserialize};
@@ -32,16 +34,19 @@ pub struct GradientBoostingImpl<Est, EstParams> {
     mean: D,
 }
 
-impl GradientBoostingImpl<DecisionTreeImpl<DecisionRuleImpl>, TreeParameters> {
-    pub fn new(params: Rc<GradientBoostingParameters<TreeParameters>>) -> Self {
+impl<T, EstParams> GradientBoostingImpl<T, EstParams> {
+    pub fn new(params: Rc<GradientBoostingParameters<EstParams>>) -> Self {
         GradientBoostingImpl {
             params: params,
             estimators: vec![],
             mean: D::default(),
         }
     }
+}
 
-    pub fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
+impl<E, P> Estimator for GradientBoostingImpl<E, P>
+    where E: Estimator + ConstructibleWithRcArg<P> {
+    fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
         self.estimators.clear();
 
         let average: Mean = target.iter().collect();
@@ -49,22 +54,20 @@ impl GradientBoostingImpl<DecisionTreeImpl<DecisionRuleImpl>, TreeParameters> {
         let mut cur_target: Array1<D> = target.iter().map(|t| t - self.mean).collect();
         
         for it in 0..self.params.n_estimators {
-            let mut est = DecisionTreeImpl::new(Rc::clone(&self.params.est_params));
+            let mut est = E::new(Rc::clone(&self.params.est_params));
             est.fit(columns, &cur_target.view());
             let preds = est.predict(columns);
             if it != self.params.n_estimators - 1 {
-                // cur_target = cur_target - preds.mapv(|v| self.params.learning_rate * v);
                 cur_target = cur_target - preds * self.params.learning_rate;
             }
             self.estimators.push(est);
         }
     }
 
-    pub fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
+    fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
         let mut predictions: Array1<D> = Array1::from_elem(columns.dim().1, self.mean);
         for est in &self.estimators {
             let cur_preds = est.predict(columns);
-            // predictions = predictions + cur_preds.mapv(|v| self.params.learning_rate * v);
             predictions = predictions + cur_preds * self.params.learning_rate;
         }
         predictions

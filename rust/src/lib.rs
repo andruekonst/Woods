@@ -3,13 +3,15 @@ use ndarray::{ArrayD, ArrayViewD, ArrayViewMutD, ArrayView2, Array2};
 use numpy::{IntoPyArray, PyArrayDyn, PyArray2, PyArray1};
 use pyo3::prelude::{pymodule, Py, PyModule, PyResult, Python, pyclass, pymethods, PyObject, PyErr};
 
+mod numerics;
 mod estimator;
 mod ensemble;
 mod rule;
 mod tree;
 mod boosting;
 mod deep_boosting;
-use crate::rule::DecisionRuleImpl;
+use crate::estimator::Estimator;
+use crate::rule::{DecisionRuleImpl, SplitRule};
 use crate::tree::{TreeParameters, DecisionTreeImpl};
 use crate::boosting::{GradientBoostingParameters, GradientBoostingImpl, TreeGBM};
 use crate::deep_boosting::{DeepBoostingParameters, DeepBoostingImpl};
@@ -20,8 +22,8 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use std::fmt;
 use pyo3::exceptions;
+use crate::numerics::D as DType;
 
-type DType = f64;
 
 fn to_columns<D: numpy::types::TypeNum>(x: &PyArray2<D>) -> Array2<D> {
     let arr: ArrayView2<'_, D> = x.as_array();

@@ -1,10 +1,15 @@
 use ndarray::{ArrayView2, ArrayView1, Array1, Axis, Slice};
 use ndarray_stats::DeviationExt;
-use crate::rule::D;
+use crate::numerics::D;
+use std::rc::Rc;
 
 pub trait Estimator {
     fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>);
     fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D>;
+}
+
+pub trait ConstructibleWithRcArg<P> {
+    fn new(arg: Rc<P>) -> Self;
 }
 
 pub fn eval_est<Est: Estimator>(

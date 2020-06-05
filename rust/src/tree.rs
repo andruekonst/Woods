@@ -1,5 +1,7 @@
 use ndarray::{ArrayView2, ArrayView1, Array1, Axis};
-use crate::rule::{DecisionRuleImpl, D};
+use crate::rule::{SplitRule};
+use crate::estimator::{Estimator, ConstructibleWithRcArg};
+use crate::numerics::D;
 use std::rc::Rc;
 use serde::{Serialize, Deserialize};
 
@@ -28,7 +30,7 @@ pub struct DecisionTreeImpl<Splitter> {
     routes: Vec<[i64; 2]>,
 }
 
-impl DecisionTreeImpl<DecisionRuleImpl> {
+impl<S: SplitRule> DecisionTreeImpl<S> {
     pub fn new(params: Rc<TreeParameters>) -> Self {
         DecisionTreeImpl {
             params,
@@ -48,7 +50,7 @@ impl DecisionTreeImpl<DecisionRuleImpl> {
             }
         }
 
-        let mut splitter = DecisionRuleImpl::new();
+        let mut splitter = S::new();
         if let None = splitter.fit_by_indices(columns, target, indices) {
             return -1;
         }
@@ -63,9 +65,10 @@ impl DecisionTreeImpl<DecisionRuleImpl> {
 
         id as i64
     }
+}
 
-    pub fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
-        // self.fit_by_indices(columns, target, None);
+impl<S: SplitRule> Estimator for DecisionTreeImpl<S> {
+    fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
         self.splitters.clear();
         self.routes.clear();
 
@@ -73,21 +76,14 @@ impl DecisionTreeImpl<DecisionRuleImpl> {
         self.routes.resize(n_nodes, [-1i64; 2]);
 
         self.build_tree(columns, target, None, self.params.depth);
-        // println!("Routes: {:?}", self.routes);
-        // println!("Splits: {:?}", self.splitters);
     }
 
-    pub fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
-        // columns.row(self.split_info.as_ref().unwrap().feature).iter().map(|val| {
-        //     let cond = *val > self.split_info.as_ref().unwrap().threshold;
-        //     let index = cond as usize;
-        //     self.split_info.as_ref().unwrap().values[index]
-        // }).collect::<Array1<D>>()
+    fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
         columns.axis_iter(Axis(1)).map(|features| {
             let mut cur: i64 = 0;
             let mut val;
             loop {
-                let split_info = self.splitters[cur as usize].split_info.as_ref().unwrap();
+                let split_info = self.splitters[cur as usize].get_split().unwrap();
                 let cond: bool = features[split_info.feature] > split_info.threshold;
                 cur = self.routes[cur as usize][cond as usize] as i64;
                 val = split_info.values[cond as usize];
@@ -97,23 +93,11 @@ impl DecisionTreeImpl<DecisionRuleImpl> {
             }
             val
         }).collect::<Array1<D>>()
-        /*
-            Column predictions(columns[0].size());
-            for (int i = 0; i < predictions.size(); i++) {
-                int cur = 0;
-                DType val;
-                // std::cout << "Predict " << i << ": " << std::endl;
-                do {
-                    auto &split_info = splitters[cur].split_info;
-                    // std::cout << "  " << cur << ": " << split_info.feature << " / " << split_info.threshold << std::endl;
-                    bool cond = columns[split_info.feature][i] > split_info.threshold;
-                    cur = routes[cur][cond];
-                    val = split_info.values[cond];
-                    // std::cout << cur << std::endl;
-                } while (cur > 0);
-                predictions[i] = val;
-            }
-            return predictions;
-        */
+    }
+}
+
+impl<T: SplitRule> ConstructibleWithRcArg<TreeParameters> for DecisionTreeImpl<T> {
+    fn new(arg: Rc<TreeParameters>) -> Self {
+        DecisionTreeImpl::new(arg)
     }
 }
