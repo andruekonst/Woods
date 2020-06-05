@@ -18,6 +18,9 @@ rand = "0.7.3"
 average = "0.10.4"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
+ndarray-stats = "0.3"
+itertools = "0.9"
+rayon = "1.1"
 
 [dependencies.pyo3]
 version = "0.10.0"

@@ -165,13 +165,13 @@ impl DeepGradientBoosting {
         self.dgbm.predict(&features.view()).into_pyarray(py).to_owned()
     }
 
-    // fn save(&self, filename: &str) -> PyResult<()> {
-    //     save(&self.dgbm, filename)
-    // }
+    fn save(&self, filename: &str) -> PyResult<()> {
+        save(&self.dgbm, filename)
+    }
 
-    // fn load(&mut self, filename: &str) -> PyResult<()> {
-    //     load(&mut self.dgbm, filename)
-    // }
+    fn load(&mut self, filename: &str) -> PyResult<()> {
+        load(&mut self.dgbm, filename)
+    }
 }
 
 

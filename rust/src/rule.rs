@@ -10,10 +10,10 @@ use serde::{Serialize, Deserialize};
 pub type D = f64;
 
 #[derive(PartialEq,PartialOrd)]
-struct NonNan(D);
+pub struct NonNan(D);
 
 impl NonNan {
-    fn new(val: D) -> Option<NonNan> {
+    pub fn new(val: D) -> Option<NonNan> {
         Some(NonNan(val))
         // if val.is_nan() {
         //     None
@@ -24,6 +24,12 @@ impl NonNan {
 }
 
 impl Eq for NonNan {}
+
+impl Clone for NonNan {
+    fn clone(&self) -> Self {
+        NonNan::from(self.0)
+    }
+}
 
 impl Ord for NonNan {
     fn cmp(&self, other: &NonNan) -> Ordering {

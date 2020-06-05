@@ -7,6 +7,7 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.base import BaseEstimator, RegressorMixin
 from time import time
+import os
 
 
 print("Check DecisionRule:")
@@ -33,7 +34,10 @@ print(y)
 print("  woods tree predictions:", dt.predict(X))
 print("  ", mean_squared_error(y, dt.predict(X)))
 
-dt_filename = "tmp_models/test.json"
+models_dir = "tmp_models"
+print(f"Make temporary models directory: {models_dir}")
+os.makedirs(models_dir, exist_ok=True)
+dt_filename = os.path.join(models_dir, "test_dt.json")
 print(f"Check DecisionTree.save('{dt_filename}')")
 dt.save(dt_filename)
 
@@ -123,7 +127,7 @@ print("  best woods randomized gradient boosting predictions:")
 print("    ", mean_squared_error(y_test, model.predict(X_test)))
 print(f"  best parameters: {model.best_params_}")
 
-gbm_filename = "tmp_models/test_gbm.json"
+gbm_filename = os.path.join(models_dir, "test_gbm.json")
 print(f"Check WoodsGBMRegressor.best_estimator_.est_.save('{gbm_filename}')")
 model.best_estimator_.est_.save(gbm_filename)
 
@@ -136,15 +140,16 @@ print("    ", mean_squared_error(y_test, loaded_gbm.predict(X_test)))
 print("Check DeepGradientBoosting")
 cb = woods.DeepGradientBoosting(n_estimators=5)
 
-cb_times = []
-for j in range(n_experiments):
-    start = time()
-    for i in range(n_repeats):
-        cb.fit(X_train, y_train)
-    end = time()
-    cb_times.append(end - start)
-print(f"  fit time ({n_experiments} experiments with {n_repeats} repetitions):")
-print(f"    {np.mean(cb_times)} +- {np.std(cb_times)}")
+# cb_times = []
+# for j in range(n_experiments):
+#     start = time()
+#     for i in range(n_repeats):
+#         cb.fit(X_train, y_train)
+#     end = time()
+#     cb_times.append(end - start)
+# print(f"  fit time ({n_experiments} experiments with {n_repeats} repetitions):")
+# print(f"    {np.mean(cb_times)} +- {np.std(cb_times)}")
+cb.fit(X_train, y_train)
 print("  woods deep gradient boosting predictions:") # , gbm.predict(X))
 # print(np.mean(np.linalg.norm(y_test - gbm.predict(X_test))))
 print("    ", mean_squared_error(y_test, cb.predict(X_test)))
@@ -157,6 +162,16 @@ for j in range(n_experiments):
     end = time()
     cb_times.append(end - start)
 print(f"    {np.mean(cb_times)} +- {np.std(cb_times)}")
+
+cb_filename = os.path.join(models_dir, "test_cb.json")
+print(f"Check DeepGradientBoosting.save({cb_filename})")
+cb.save(cb_filename)
+
+print(f"Check DeepGradientBoosting.load('{cb_filename}')")
+loaded_cb = woods.DeepGradientBoosting()
+loaded_cb.load(cb_filename)
+print("  best loaded deep gbm predictions:")
+print("    ", mean_squared_error(y_test, loaded_cb.predict(X_test)))
 
 
 

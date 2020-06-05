@@ -1,15 +1,65 @@
-use ndarray::{ArrayView2, ArrayView1, Array1, Array, Axis, Array2, stack};
-use crate::rule::{D};
+use ndarray::{ArrayView2, ArrayView1, Array1, Array, Axis, Array2, stack, Slice};
+use crate::rule::{D, NonNan};
 use crate::tree::TreeParameters;
 use crate::boosting::{GradientBoostingImpl, GradientBoostingParameters, TreeGBM};
 use std::rc::Rc;
 use serde::{Serialize, Deserialize};
+use ndarray_stats::DeviationExt;
+use itertools::iproduct;
+use rayon::prelude::*;
+use rayon::iter::ParallelBridge;
 
 trait Estimator {
     fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>);
     fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D>;
 }
 
+impl Estimator for TreeGBM {
+    fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
+        self.fit(columns, target);
+    }
+    fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
+        self.predict(columns)
+    }
+}
+
+fn eval_est<Est: Estimator>(
+    est: &mut Est,
+    train_columns: &ArrayView2<'_, D>,
+    train_target: &ArrayView1<'_, D>,
+    val_columns: &ArrayView2<'_, D>,
+    val_target: &ArrayView1<'_, D>) -> D {
+    est.fit(train_columns, train_target);
+    let preds = est.predict(val_columns);
+    preds.mean_sq_err(val_target).unwrap() as D
+}
+
+fn eval_est_cv<Est: Estimator>(est: &mut Est, cv: u8, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) -> D {
+    let n_samples: usize = target.dim();
+    let fold_size: usize = n_samples / (cv as usize);
+    let mut res: D = D::default();
+
+    for i in 0..cv {
+        let from = fold_size * (i as usize);
+        let to = std::cmp::min(fold_size * ((i + 1) as usize), n_samples + 1);
+        let fold_columns = columns.slice_axis(Axis(1), Slice::from(from..to));
+        let fold_target = target.slice_axis(Axis(0), Slice::from(from..to));
+        if i > 0 {
+            let val_columns = columns.slice_axis(Axis(1), Slice::from(0..from));
+            let val_target = target.slice_axis(Axis(0), Slice::from(0..from));
+            res += eval_est(est, &fold_columns, &fold_target, &val_columns, &val_target);
+        }
+        if i < cv - 1 {
+            let val_columns = columns.slice_axis(Axis(1), Slice::from(to..));
+            let val_target = target.slice_axis(Axis(0), Slice::from(to..));
+            res += eval_est(est, &fold_columns, &fold_target, &val_columns, &val_target);
+        }
+    }
+    // res / (cv as D)
+    res
+}
+
+#[derive(Serialize, Deserialize)]
 pub struct AverageEnsemble<Est> {
     estimators: Vec<Est>
 }
@@ -41,12 +91,6 @@ impl Estimator for AverageEnsemble<TreeGBM> {
         }
         result *= alpha;
         result
-        // let preds = self.estimators.iter()
-        //                 .map(|est| est.predict(columns))
-        //                 .collect::<Vec<Array1<D>>>();
-        // let views = preds.iter().map(|p| p.view()).collect::<Vec<ArrayView1<'_, D>>>();
-        // let preds_arr: Array2<D> = ndarray::stack(Axis(1), &views[..]).unwrap();
-        // preds_arr.mean_axis(Axis(1)).unwrap() // / (self.estimators.len() as D)
     }
 }
 
@@ -64,11 +108,34 @@ const DEFAULT_DGBM_LEARNING_RATE: D = 0.25 as D;
 impl DeepBoostingParameters {
     pub fn new(n_estimators: Option<u32>, layer_width: Option<u32>, learning_rate: Option<D>) -> Self {
         DeepBoostingParameters {
-            n_estimators: n_estimators.unwrap_or(DEFAULT_DGBM_N_ESTIMATORS),
-            layer_width: layer_width.unwrap_or(DEFAULT_DGBM_LAYER_WIDTH),
+            n_estimators:   n_estimators.unwrap_or(DEFAULT_DGBM_N_ESTIMATORS),
+            layer_width:     layer_width.unwrap_or(DEFAULT_DGBM_LAYER_WIDTH),
             learning_rate: learning_rate.unwrap_or(DEFAULT_DGBM_LEARNING_RATE),
         }
     }
+}
+
+type TreeGBMParams = GradientBoostingParameters<TreeParameters>;
+
+fn cv_best_params(columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) -> TreeGBMParams {
+    let depth = vec![2, 3, 5];
+    let n_epochs = vec![100, 1000];
+    let learning_rate = vec![0.1, 0.01];
+    let best = iproduct!(depth.iter(), n_epochs.iter(), learning_rate.iter())
+        .par_bridge() // compute in parallel
+        .map(|p| {
+        let (d, n, lr) = p;
+        let tree_params = TreeParameters::new(Some(*d), None);
+        let params = GradientBoostingParameters::new(tree_params, Some(*n), Some(*lr));
+        let mut est = TreeGBM::new(Rc::new(params));
+        let score = eval_est_cv(&mut est, 5, columns, target);
+        (p, NonNan::from(score))
+    }).min_by_key(|a| {
+        a.1.clone()
+    }).map(|a| a.0).unwrap();
+    let tree_params = TreeParameters::new(Some(*best.0), None);
+    let params = GradientBoostingParameters::new(tree_params, Some(*best.1), Some(*best.2));
+    params
 }
 
 #[derive(Serialize, Deserialize)]
@@ -94,10 +161,7 @@ impl DeepBoostingImpl<AverageEnsemble<TreeGBM>> {
         
         for it in 0..self.params.n_estimators {
             // find locally optimal GBM parameters
-            // let opt_params = Rc::new(cv_opt_params(acc_columns));
-            let tree_params = TreeParameters::new(None, None);
-            let params = GradientBoostingParameters::new(tree_params, None, None);
-            let opt_params = Rc::new(params);
+            let opt_params = Rc::new(cv_best_params(&acc_columns.view(), &cur_target.view()));
             let mut ensemble = AverageEnsemble::new(self.params.layer_width, opt_params);
 
             // fit ensemble on generated features
