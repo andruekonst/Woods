@@ -27,13 +27,13 @@ impl<E> GradientBoostingParameters<E> {
 
 #[derive(Serialize, Deserialize)]
 pub struct GradientBoostingImpl<Est, EstParams> {
-    params: GradientBoostingParameters<EstParams>,
+    params: Rc<GradientBoostingParameters<EstParams>>,
     estimators: Vec<Est>,
     mean: D,
 }
 
 impl GradientBoostingImpl<DecisionTreeImpl<DecisionRuleImpl>, TreeParameters> {
-    pub fn new(params: GradientBoostingParameters<TreeParameters>) -> Self {
+    pub fn new(params: Rc<GradientBoostingParameters<TreeParameters>>) -> Self {
         GradientBoostingImpl {
             params: params,
             estimators: vec![],
@@ -70,3 +70,5 @@ impl GradientBoostingImpl<DecisionTreeImpl<DecisionRuleImpl>, TreeParameters> {
         predictions
     }
 }
+
+pub type TreeGBM = GradientBoostingImpl<DecisionTreeImpl<DecisionRuleImpl>, TreeParameters>;

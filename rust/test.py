@@ -133,6 +133,31 @@ loaded_gbm.load(gbm_filename)
 print("  best loaded gbm predictions:")
 print("    ", mean_squared_error(y_test, loaded_gbm.predict(X_test)))
 
+print("Check DeepGradientBoosting")
+cb = woods.DeepGradientBoosting(n_estimators=5)
+
+cb_times = []
+for j in range(n_experiments):
+    start = time()
+    for i in range(n_repeats):
+        cb.fit(X_train, y_train)
+    end = time()
+    cb_times.append(end - start)
+print(f"  fit time ({n_experiments} experiments with {n_repeats} repetitions):")
+print(f"    {np.mean(cb_times)} +- {np.std(cb_times)}")
+print("  woods deep gradient boosting predictions:") # , gbm.predict(X))
+# print(np.mean(np.linalg.norm(y_test - gbm.predict(X_test))))
+print("    ", mean_squared_error(y_test, cb.predict(X_test)))
+print("  woods deep gradient boosting predict times:")
+cb_times = []
+for j in range(n_experiments):
+    start = time()
+    for i in range(n_repeats):
+        cb.predict(X_train)
+    end = time()
+    cb_times.append(end - start)
+print(f"    {np.mean(cb_times)} +- {np.std(cb_times)}")
+
 
 
 print("Scikit-learn GradientBoostingRegressor:")

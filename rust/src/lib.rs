@@ -8,9 +8,11 @@ use std::vec;
 mod rule;
 mod tree;
 mod boosting;
+mod deep_boosting;
 use crate::rule::DecisionRuleImpl;
 use crate::tree::{TreeParameters, DecisionTreeImpl};
-use crate::boosting::{GradientBoostingParameters, GradientBoostingImpl};
+use crate::boosting::{GradientBoostingParameters, GradientBoostingImpl, TreeGBM};
+use crate::deep_boosting::{DeepBoostingParameters, DeepBoostingImpl, AverageEnsemble};
 use std::rc::Rc;
 use std::fs::File;
 use serde::{Serialize, Deserialize};
@@ -111,7 +113,7 @@ impl GradientBoosting {
         let est_params = TreeParameters::new(depth, min_samples_split);
         let params = GradientBoostingParameters::new(est_params, n_estimators, learning_rate);
         GradientBoosting {
-            gbm: GradientBoostingImpl::new(params)
+            gbm: GradientBoostingImpl::new(Rc::new(params))
         }
     }
     
@@ -134,6 +136,42 @@ impl GradientBoosting {
     fn load(&mut self, filename: &str) -> PyResult<()> {
         load(&mut self.gbm, filename)
     }
+}
+
+#[pyclass(module="woods")]
+pub struct DeepGradientBoosting {
+    dgbm: DeepBoostingImpl<AverageEnsemble<TreeGBM>>
+}
+
+#[pymethods]
+impl DeepGradientBoosting {
+    #[new]
+    fn new(n_estimators: Option<u32>, layer_width: Option<u32>, learning_rate: Option<DType>) -> Self {
+        let params = DeepBoostingParameters::new(n_estimators, layer_width, learning_rate);
+        DeepGradientBoosting {
+            dgbm: DeepBoostingImpl::new(params)
+        }
+    }
+    
+    fn fit(&mut self, x: &PyArray2<DType>, y: &PyArray1<DType>) {
+        let features = to_columns(x);
+        let target = y.as_array();
+        assert_eq!(features.dim().1, target.dim());
+        self.dgbm.fit(&features.view(), &target);
+    }
+
+    fn predict(&self, py: Python<'_>, x: &PyArray2<DType>) -> Py<PyArray1<DType>> {
+        let features = to_columns(x);
+        self.dgbm.predict(&features.view()).into_pyarray(py).to_owned()
+    }
+
+    // fn save(&self, filename: &str) -> PyResult<()> {
+    //     save(&self.dgbm, filename)
+    // }
+
+    // fn load(&mut self, filename: &str) -> PyResult<()> {
+    //     load(&mut self.dgbm, filename)
+    // }
 }
 
 
@@ -175,6 +213,7 @@ fn woods(_py: Python<'_>, m: &PyModule) -> PyResult<()> {
     m.add_class::<DecisionRule>()?;
     m.add_class::<DecisionTree>()?;
     m.add_class::<GradientBoosting>()?;
+    m.add_class::<DeepGradientBoosting>()?;
 
     Ok(())
 }
