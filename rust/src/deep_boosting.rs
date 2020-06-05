@@ -33,25 +33,33 @@ impl DeepBoostingParameters {
 
 type TreeGBMParams = GradientBoostingParameters<TreeParameters>;
 
-fn cv_best_params(columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) -> TreeGBMParams {
-    let depth = vec![2, 3, 5];
-    let n_epochs = vec![100, 1000];
-    let learning_rate = vec![0.1, 0.01];
-    let best = iproduct!(depth.iter(), n_epochs.iter(), learning_rate.iter())
-        .par_bridge() // compute in parallel
-        .map(|p| {
-        let (d, n, lr) = p;
-        let tree_params = TreeParameters::new(Some(*d), None);
-        let params = GradientBoostingParameters::new(tree_params, Some(*n), Some(*lr));
-        let mut est = TreeGBM::new(Rc::new(params));
-        let score = eval_est_cv(&mut est, 5, columns, target);
-        (p, NonNan::from(score))
-    }).min_by_key(|a| {
-        a.1.clone()
-    }).map(|a| a.0).unwrap();
-    let tree_params = TreeParameters::new(Some(*best.0), None);
-    let params = GradientBoostingParameters::new(tree_params, Some(*best.1), Some(*best.2));
-    params
+pub trait WithBestParameters {
+    type Params;
+    fn cv_best_params(columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) -> Self::Params;
+}
+
+impl WithBestParameters for TreeGBM {
+    type Params = TreeGBMParams;
+    fn cv_best_params(columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) -> TreeGBMParams {
+        let depth = vec![2, 3, 5];
+        let n_epochs = vec![100, 1000];
+        let learning_rate = vec![0.1, 0.01];
+        let best = iproduct!(depth.iter(), n_epochs.iter(), learning_rate.iter())
+            .par_bridge() // compute in parallel
+            .map(|p| {
+            let (d, n, lr) = p;
+            let tree_params = TreeParameters::new(Some(*d), None);
+            let params = GradientBoostingParameters::new(tree_params, Some(*n), Some(*lr));
+            let mut est = TreeGBM::new(Rc::new(params));
+            let score = eval_est_cv(&mut est, 5, columns, target);
+            (p, NonNan::from(score))
+        }).min_by_key(|a| {
+            a.1.clone()
+        }).map(|a| a.0).unwrap();
+        let tree_params = TreeParameters::new(Some(*best.0), None);
+        let params = GradientBoostingParameters::new(tree_params, Some(*best.1), Some(*best.2));
+        params
+    }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -70,6 +78,8 @@ impl DeepBoostingImpl<AverageEnsemble<TreeGBM>> {
 }
 
 
+// impl<T, P> Estimator for DeepBoostingImpl<AverageEnsemble<T>>
+//     where T: Estimator + WithBestParameters<Params=P> + ConstructibleWithRcArg<Arg=P> {
 impl Estimator for DeepBoostingImpl<AverageEnsemble<TreeGBM>> {
     fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
         self.estimators.clear();
@@ -80,7 +90,8 @@ impl Estimator for DeepBoostingImpl<AverageEnsemble<TreeGBM>> {
         
         for it in 0..self.params.n_estimators {
             // find locally optimal GBM parameters
-            let opt_params = Rc::new(cv_best_params(&acc_columns.view(), &cur_target.view()));
+            // let opt_params = Rc::new(T::cv_best_params(&acc_columns.view(), &cur_target.view()));
+            let opt_params = Rc::new(TreeGBM::cv_best_params(&acc_columns.view(), &cur_target.view()));
             let mut ensemble = AverageEnsemble::new(self.params.layer_width, opt_params);
 
             // fit ensemble on generated features

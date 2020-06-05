@@ -10,7 +10,7 @@ mod rule;
 mod tree;
 mod boosting;
 mod deep_boosting;
-use crate::estimator::Estimator;
+use crate::estimator::{Estimator, ConstructibleWithRcArg};
 use crate::rule::{DecisionRuleImpl, SplitRule};
 use crate::tree::{TreeParameters, DecisionTreeImpl};
 use crate::boosting::{GradientBoostingParameters, GradientBoostingImpl, TreeGBM};

@@ -6,15 +6,21 @@ use crate::boosting::{GradientBoostingImpl, GradientBoostingParameters, TreeGBM}
 use crate::estimator::*;
 use std::rc::Rc;
 
+pub trait Ensemble<P>: Estimator {
+    fn new(width: u32, params: Rc<P>) -> Self;
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct AverageEnsemble<Est> {
     estimators: Vec<Est>
 }
 
-impl AverageEnsemble<TreeGBM> {
-    pub fn new(width: u32, params: Rc<GradientBoostingParameters<TreeParameters>>) -> Self {
+// impl Ensemble<GradientBoostingParameters<TreeParameters>> for AverageEnsemble<TreeGBM> {
+impl<P, T: Estimator + ConstructibleWithRcArg<Arg=P>> Ensemble<P> for AverageEnsemble<T> {
+    fn new(width: u32, params: Rc<P>) -> Self {
+    // fn new(width: u32, params: Rc<GradientBoostingParameters<TreeParameters>>) -> Self {
         let estimators = (0..width).map(|_i| {
-            GradientBoostingImpl::new(Rc::clone(&params))
+            T::new(Rc::clone(&params))
         }).collect();
         AverageEnsemble {
             estimators: estimators,
@@ -22,7 +28,7 @@ impl AverageEnsemble<TreeGBM> {
     }
 }
 
-impl Estimator for AverageEnsemble<TreeGBM> {
+impl<T: Estimator> Estimator for AverageEnsemble<T> {
     fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
         for est in &mut self.estimators {
             est.fit(columns, target);

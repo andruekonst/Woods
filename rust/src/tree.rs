@@ -96,7 +96,8 @@ impl<S: SplitRule> Estimator for DecisionTreeImpl<S> {
     }
 }
 
-impl<T: SplitRule> ConstructibleWithRcArg<TreeParameters> for DecisionTreeImpl<T> {
+impl<T: SplitRule> ConstructibleWithRcArg for DecisionTreeImpl<T> {
+    type Arg = TreeParameters;
     fn new(arg: Rc<TreeParameters>) -> Self {
         DecisionTreeImpl::new(arg)
     }

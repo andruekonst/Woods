@@ -34,8 +34,10 @@ pub struct GradientBoostingImpl<Est, EstParams> {
     mean: D,
 }
 
-impl<T, EstParams> GradientBoostingImpl<T, EstParams> {
-    pub fn new(params: Rc<GradientBoostingParameters<EstParams>>) -> Self {
+// impl<T, EstParams> GradientBoostingImpl<T, EstParams> {
+impl<T, EstParams> ConstructibleWithRcArg for GradientBoostingImpl<T, EstParams> {
+    type Arg = GradientBoostingParameters<EstParams>;
+    fn new(params: Rc<Self::Arg>) -> Self {
         GradientBoostingImpl {
             params: params,
             estimators: vec![],
@@ -45,7 +47,7 @@ impl<T, EstParams> GradientBoostingImpl<T, EstParams> {
 }
 
 impl<E, P> Estimator for GradientBoostingImpl<E, P>
-    where E: Estimator + ConstructibleWithRcArg<P> {
+    where E: Estimator + ConstructibleWithRcArg<Arg=P> {
     fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
         self.estimators.clear();
 
