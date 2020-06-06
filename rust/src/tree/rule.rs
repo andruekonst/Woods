@@ -5,7 +5,7 @@ use rand::Rng;
 use average::Variance;
 // use ndarray::parallel::prelude::*;
 use serde::{Serialize, Deserialize};
-use crate::numerics::{D, NonNan};
+use crate::utils::numerics::{D, NonNan};
 use crate::estimator::Estimator;
 use crate::utils::array::*;
 
@@ -22,10 +22,13 @@ pub struct Split {
     pub values: [D; 2]
 }
 
-/// Decision Rule implementation.
+/// Random Split Rule implementation.
+/// 
+/// Each feature split threshold value is selected randomly from uniform distribution.
+/// Then feature with smallest impurity is used.
 #[derive(Debug, Serialize, Deserialize)]
-pub struct DecisionRuleImpl {
-    /// Split information. If `None` after `fit`, training failed.
+pub struct RandomSplitRule {
+    /// Split information. If it is `None` after `fit`, training failed.
     pub split_info: Option<Split>
 }
 
@@ -113,9 +116,9 @@ pub trait SplitRule {
     fn get_split(&self) -> Option<&Split>;
 }
 
-impl SplitRule for DecisionRuleImpl {
+impl SplitRule for RandomSplitRule {
     fn new() -> Self {
-        DecisionRuleImpl {
+        RandomSplitRule {
             split_info: None
         }
     }
@@ -157,13 +160,13 @@ impl SplitRule for DecisionRuleImpl {
     }
 }
 
-impl Estimator for DecisionRuleImpl {
+impl<T: SplitRule> Estimator for T {
     fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
         self.fit_by_indices(columns, target, None);
     }
 
     fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
-        let split_info = self.split_info.as_ref().unwrap();
+        let split_info = self.get_split().unwrap();
         columns.row(split_info.feature).iter().map(|val| {
             let cond = *val > split_info.threshold;
             let index = cond as usize;

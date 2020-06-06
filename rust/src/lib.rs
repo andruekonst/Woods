@@ -32,7 +32,7 @@
 //! # save JSON representation of model to filesystem (optional step)
 //! model.save("my_deep_gbm.json", format="json")
 //! # clean up memory
-//! delete model
+//! del model
 //! 
 //! # make empty model and load contents from JSON file
 //! loaded_model = woods.DeepGradientBoosting()
@@ -42,24 +42,22 @@
 //! print("r^2 score:", r2_score(y_test, loaded_model.predict(X_test)))
 //! ```
 
-pub mod numerics;
 pub mod estimator;
 pub mod ensemble;
-pub mod rule;
+// pub mod rule;
 pub mod tree;
-pub mod boosting;
-pub mod deep_boosting;
-pub mod serialization;
+// pub mod boosting;
+// pub mod deep_boosting;
 pub mod utils;
 
 use crate::estimator::{Estimator, ConstructibleWithRcArg, ConstructibleWithArg};
-use crate::rule::{DecisionRuleImpl, SplitRule};
+use tree::rule::{RandomSplitRule, SplitRule};
 use crate::tree::{TreeParameters, DecisionTreeImpl};
-use crate::boosting::{GradientBoostingParameters, GradientBoostingImpl, TreeGBM};
-use crate::deep_boosting::{DeepBoostingParameters, DeepBoostingImpl};
+use crate::ensemble::boosting::{GradientBoostingParameters, GradientBoostingImpl, TreeGBM};
+use crate::ensemble::deep_boosting::{DeepBoostingParameters, DeepBoostingImpl};
 use crate::ensemble::AverageEnsemble;
-use crate::numerics::D as DType;
-use crate::serialization::{load, save};
+use utils::numerics::D as DType;
+use utils::serialization::{load, save};
 
 use ndarray::{ArrayView2, Array2};
 use numpy::{IntoPyArray, PyArray2, PyArray1};
@@ -74,7 +72,7 @@ fn to_columns<D: numpy::types::TypeNum>(x: &PyArray2<D>) -> Array2<D> {
 
 #[pyclass(module="woods")]
 pub struct DecisionRule {
-    rule: DecisionRuleImpl
+    rule: RandomSplitRule
 }
 
 #[pymethods]
@@ -82,7 +80,7 @@ impl DecisionRule {
     #[new]
     fn new() -> Self {
         DecisionRule {
-            rule: DecisionRuleImpl::new()
+            rule: RandomSplitRule::new()
         }
     }
     
@@ -101,7 +99,7 @@ impl DecisionRule {
 
 #[pyclass(module="woods")]
 pub struct DecisionTree {
-    tree: DecisionTreeImpl<DecisionRuleImpl>
+    tree: DecisionTreeImpl<RandomSplitRule>
 }
 
 #[pymethods]
@@ -137,7 +135,7 @@ impl DecisionTree {
 
 #[pyclass(module="woods")]
 pub struct GradientBoosting {
-    gbm: GradientBoostingImpl<DecisionTreeImpl<DecisionRuleImpl>, TreeParameters>
+    gbm: TreeGBM
 }
 
 #[pymethods]

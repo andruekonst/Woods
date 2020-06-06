@@ -1,8 +1,8 @@
 use ndarray::{ArrayView2, ArrayView1, Array1};
 use average::Mean;
 use crate::estimator::{Estimator, ConstructibleWithRcArg};
-use crate::rule::DecisionRuleImpl;
-use crate::numerics::D;
+use crate::tree::rule::RandomSplitRule;
+use crate::utils::numerics::D;
 use crate::tree::{TreeParameters, DecisionTreeImpl};
 use std::rc::Rc;
 use serde::{Serialize, Deserialize};
@@ -76,4 +76,4 @@ impl<E, P> Estimator for GradientBoostingImpl<E, P>
     }
 }
 
-pub type TreeGBM = GradientBoostingImpl<DecisionTreeImpl<DecisionRuleImpl>, TreeParameters>;
+pub type TreeGBM = GradientBoostingImpl<DecisionTreeImpl<RandomSplitRule>, TreeParameters>;

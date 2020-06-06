@@ -1,9 +1,13 @@
 use ndarray::{ArrayView2, ArrayView1, Array1, Axis};
-use crate::rule::{SplitRule};
+// use crate::rule::{SplitRule};
 use crate::estimator::{Estimator, ConstructibleWithRcArg};
-use crate::numerics::D;
+use crate::utils::numerics::D;
 use std::rc::Rc;
 use serde::{Serialize, Deserialize};
+
+pub mod rule;
+
+use rule::SplitRule;
 
 /// Default tree depth parameter value
 const DEFAULT_TREE_DEPTH: u8 = 3u8;

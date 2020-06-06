@@ -1,8 +1,11 @@
 use serde::{Serialize, Deserialize};
 use ndarray::{ArrayView2, ArrayView1, Array1};
-use crate::numerics::D;
+use crate::utils::numerics::D;
 use crate::estimator::*;
 use std::rc::Rc;
+
+pub mod boosting;
+pub mod deep_boosting;
 
 pub trait Ensemble: Estimator {
     type Arg;
