@@ -9,16 +9,23 @@ use crate::numerics::{D, NonNan};
 use crate::estimator::Estimator;
 use crate::utils::array::*;
 
+/// Split information.
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Split {
+    /// Feature id / number.
     pub feature: usize,
+    /// Threshold for splitting.
     pub threshold: D,
+    /// Split impurity. Lower values correspond to better split.
     pub impurity: D,
+    /// Left and right mean values.
     pub values: [D; 2]
 }
 
+/// Decision Rule implementation.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DecisionRuleImpl {
+    /// Split information. If `None` after `fit`, training failed.
     pub split_info: Option<Split>
 }
 
@@ -86,17 +93,23 @@ fn find_split<'a, 'b>(
 
 type Indices = Vec<usize>;
 
+/// Sample indices for left and right subnodes.
 #[derive(Default)]
 pub struct SplitIndices {
+    /// Slice of left and right subnodes sample indices.
     pub indices: [Indices; 2]
 }
 
+/// Split rule can be fit by indices and can split data indices into `SplitIndices`.
 pub trait SplitRule {
     fn new() -> Self;
+    /// Fit using elements corresponding to `indices`.
+    /// If `indices` is `None`, all elements are used.
     fn fit_by_indices(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>,
                       indices: Option<&Vec<usize>>) -> Option<()>;
     fn split_indices(&self, columns: &ArrayView2<'_, D>, _target: &ArrayView1<'_, D>,
                          indices: Option<&Vec<usize>>) -> SplitIndices;
+    /// Get split information.
     fn get_split(&self) -> Option<&Split>;
 }
 

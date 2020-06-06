@@ -5,16 +5,22 @@ use crate::numerics::D;
 use std::rc::Rc;
 use serde::{Serialize, Deserialize};
 
+/// Default tree depth parameter value
 const DEFAULT_TREE_DEPTH: u8 = 3u8;
+/// Default tree min samples split parameter value
 const DEFAULT_TREE_MIN_SAMPLES_SPLIT: usize = 2usize;
 
+/// Decision Tree Parameters.
 #[derive(Serialize, Deserialize)]
 pub struct TreeParameters {
+    /// Max tree depth
     pub depth: u8,
+    /// Min number of samples to split node
     pub min_samples_split: usize,
 }
 
 impl TreeParameters {
+    /// Make new `TreeParameters` with default or specified parameters.
     pub fn new(depth: Option<u8>, min_samples_split: Option<usize>) -> Self {
         TreeParameters {
             depth: depth.unwrap_or(DEFAULT_TREE_DEPTH),
@@ -23,10 +29,14 @@ impl TreeParameters {
     }
 }
 
+/// Decision Tree Implementation.
 #[derive(Serialize, Deserialize)]
 pub struct DecisionTreeImpl<Splitter> {
+    /// Configuration
     params: Rc<TreeParameters>,
+    /// Split rules
     splitters: Vec<Splitter>,
+    /// Routes from each node to left and right children
     routes: Vec<[i64; 2]>,
 }
 

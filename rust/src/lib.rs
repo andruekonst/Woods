@@ -1,13 +1,56 @@
 #![deny(rust_2018_idioms)]
-mod numerics;
-mod estimator;
-mod ensemble;
-mod rule;
-mod tree;
-mod boosting;
-mod deep_boosting;
-mod serialization;
-mod utils;
+
+//! Woods - Decision Tree Ensembles implementation and a Python extension.
+//! 
+//! All estimators use [`ndarray`] as a tensor framework.
+//! 
+//! # Installation of Python extension
+//! Run `> python setup.py install` to build and install python extension.
+//! 
+//! For *Windows* platform it is recommended to use [Anaconda](http://anaconda.com).
+//! 
+//! # Usage examples
+//! 1. Train, save, load and predict with [`DeepGradientBoosting`] model.
+//! ```
+//! import woods
+//! from sklearn.datasets import load_boston
+//! from sklearn.model_selection import train_test_split
+//! from sklearn.metrics import r2_score
+//! 
+//! # prepare data
+//! X, y = load_boston(return_X_y=True)
+//! X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
+//! 
+//! # make model
+//! model = woods.DeepGradientBoosting(n_estimators=5)
+//! # fit model on train data
+//! model.fit(X_train, y_train)
+//! 
+//! # evaluate quality on test data
+//! print("r^2 score:", r2_score(y_test, model.predict(X_test)))
+//! 
+//! # save JSON representation of model to filesystem (optional step)
+//! model.save("my_deep_gbm.json", format="json")
+//! # clean up memory
+//! delete model
+//! 
+//! # make empty model and load contents from JSON file
+//! loaded_model = woods.DeepGradientBoosting()
+//! loaded_model.load("my_deep_gbm.json", format="json")
+//! 
+//! # evaluate quality of loaded model on test data
+//! print("r^2 score:", r2_score(y_test, loaded_model.predict(X_test)))
+//! ```
+
+pub mod numerics;
+pub mod estimator;
+pub mod ensemble;
+pub mod rule;
+pub mod tree;
+pub mod boosting;
+pub mod deep_boosting;
+pub mod serialization;
+pub mod utils;
 
 use crate::estimator::{Estimator, ConstructibleWithRcArg, ConstructibleWithArg};
 use crate::rule::{DecisionRuleImpl, SplitRule};
