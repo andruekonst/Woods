@@ -54,11 +54,11 @@ impl<S: SplitRule> DecisionTreeImpl<S> {
         if let None = splitter.fit_by_indices(columns, target, indices) {
             return -1;
         }
-        let split_indices = splitter.split_indices(columns, target, indices);
+        let split = splitter.split_indices(columns, target, indices);
         self.splitters.push(splitter);
         let id = self.splitters.len() - 1;
-        let left_id = self.build_tree(columns, target, Some(&split_indices.left), inv_depth - 1);
-        let right_id = self.build_tree(columns, target, Some(&split_indices.right), inv_depth - 1);
+        let left_id = self.build_tree(columns, target, Some(&split.indices[0]), inv_depth - 1);
+        let right_id = self.build_tree(columns, target, Some(&split.indices[1]), inv_depth - 1);
 
         self.routes[id][0] = left_id;
         self.routes[id][1] = right_id;

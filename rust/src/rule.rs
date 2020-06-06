@@ -108,8 +108,7 @@ type Indices = Vec<usize>;
 
 #[derive(Default)]
 pub struct SplitIndices {
-    pub left: Indices,
-    pub right: Indices,
+    pub indices: [Indices; 2]
 }
 
 pub trait SplitRule {
@@ -148,19 +147,13 @@ impl SplitRule for DecisionRuleImpl {
         let column = columns.row(split_info.feature);
         if let Some(ind) = indices {
             for (value, id) in column.iter_with_index(indices).zip(ind) {
-                if value <= split_info.threshold {
-                    result.left.push(*id);
-                } else {
-                    result.right.push(*id);
-                }
+                let cond = value > split_info.threshold;
+                result.indices[cond as usize].push(*id);
             }
         } else {
             for (value, id) in column.iter().zip(0..) {
-                if *value <= split_info.threshold {
-                    result.left.push(id);
-                } else {
-                    result.right.push(id);
-                }
+                let cond = *value > split_info.threshold;
+                result.indices[cond as usize].push(id);
             }
         }
         result
