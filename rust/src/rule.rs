@@ -7,51 +7,7 @@ use average::Variance;
 use serde::{Serialize, Deserialize};
 use crate::numerics::{D, NonNan};
 use crate::estimator::Estimator;
-
-type IndexIterator<'a> = std::slice::Iter<'a, usize>;
-
-struct ArrayIndexIter<'a, 'b, 'c> {
-    array_ref: &'a ArrayView1<'c, D>,
-    index_iter: Option<IndexIterator<'b>>,
-    count: usize,
-}
-
-impl<'a, 'b, 'c> Iterator for ArrayIndexIter<'a, 'b, 'c> {
-    type Item = D;
-
-    fn next(&mut self) -> Option<D> {
-        if let Some(ind) = &mut self.index_iter {
-            let index = ind.next()?;
-            Some(self.array_ref[*index])
-        } else {
-            if self.count >= self.array_ref.dim() {
-                None
-            } else {
-                let index = self.count;
-                self.count += 1;
-                Some(self.array_ref[index])
-            }
-        }
-    }
-}
-
-trait WithIndexIter<'a, 'b, 'c> {
-    fn iter_with_index(&'a self, v: Option<&'b Vec<usize>>) -> ArrayIndexIter<'a, 'b, 'c>;
-}
-
-impl<'a, 'b, 'c> WithIndexIter<'a, 'b, 'c> for ArrayView1<'c, D> {
-    fn iter_with_index(&'a self, v: Option<&'b Vec<usize>>) -> ArrayIndexIter<'a, 'b, 'c> {
-        ArrayIndexIter {
-            array_ref: self,
-            index_iter: match &v {
-                None => None,
-                Some(it) => Some(it.iter()),
-            },
-            count: 0,
-        }
-    }
-}
-
+use crate::utils::array::*;
 
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Split {

@@ -7,6 +7,7 @@ mod tree;
 mod boosting;
 mod deep_boosting;
 mod serialization;
+mod utils;
 
 use crate::estimator::{Estimator, ConstructibleWithRcArg, ConstructibleWithArg};
 use crate::rule::{DecisionRuleImpl, SplitRule};
