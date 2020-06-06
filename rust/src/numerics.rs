@@ -36,6 +36,12 @@ impl From<D> for NonNan {
     }
 }
 
+impl From<&D> for NonNan {
+    fn from(item: &D) -> Self {
+        NonNan::new(*item).unwrap()
+    }
+}
+
 impl Into<D> for NonNan {
     fn into(self) -> D {
         self.0

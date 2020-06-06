@@ -28,8 +28,16 @@ fn find_split<'a, 'b>(
         indices: Option<&'b Vec<usize>>,
         id: usize
     ) -> Option<Split> {
-    let min: D = column.iter_with_index(indices).map(NonNan::from).min().map(NonNan::into)?;
-    let max: D = column.iter_with_index(indices).map(NonNan::from).max().map(NonNan::into)?;
+    let min: D;
+    let max: D;
+    if indices.is_some() {
+        min = column.iter_explicit_by_index(indices.unwrap()).map(NonNan::from).min().map(NonNan::into)?;
+        max = column.iter_explicit_by_index(indices.unwrap()).map(NonNan::from).max().map(NonNan::into)?;
+    } else {
+        min = column.iter().map(NonNan::from).min().map(NonNan::into)?;
+        max = column.iter().map(NonNan::from).max().map(NonNan::into)?;
+    }
+
     let mut rng = rand::thread_rng();
     let threshold: D = if min < max {
         rng.gen_range(min, max)
@@ -37,17 +45,33 @@ fn find_split<'a, 'b>(
         return None;
     };
 
-    let left: Variance = column.iter_with_index(indices)
-                               .zip(target.iter_with_index(indices))
-                               .filter(|k| {
-        k.0 <= threshold
-    }).map(|k| k.1).collect();
+    macro_rules! calc_variance {
+        ($side:ident, $var:ident, $comp:expr) => {
+            let $side: Variance;
+            if indices.is_some() {
+                $side = column.iter_explicit_by_index(indices.unwrap())
+                              .zip(target.iter_explicit_by_index(indices.unwrap()))
+                              .filter(|k| {
+                                   let $var = k.0;
+                                   $comp
+                               })
+                              .map(|k| k.1)
+                              .collect();
+            } else {
+                $side = column.iter().cloned()
+                              .zip(target.iter().cloned())
+                              .filter(|k| {
+                                   let $var = k.0;
+                                   $comp
+                               })
+                              .map(|k| k.1)
+                              .collect();
+            }
+        };
+    }
 
-    let right: Variance = column.iter_with_index(indices)
-                                .zip(target.iter_with_index(indices))
-                                .filter(|k| {
-        k.0 > threshold
-    }).map(|k| k.1).collect();
+    calc_variance!(left, it, it <= threshold);
+    calc_variance!(right, it, it > threshold);
 
     let impurity = left.population_variance() * (left.len() as D) + right.population_variance() * (right.len() as D);
     
@@ -102,7 +126,7 @@ impl SplitRule for DecisionRuleImpl {
         let split_info = self.split_info.as_ref().unwrap();
         let column = columns.row(split_info.feature);
         if let Some(ind) = indices {
-            for (value, id) in column.iter_with_index(indices).zip(ind) {
+            for (value, id) in column.iter_by_index(indices).zip(ind) {
                 let cond = value > split_info.threshold;
                 result.indices[cond as usize].push(*id);
             }
