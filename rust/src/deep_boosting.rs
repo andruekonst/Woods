@@ -68,8 +68,11 @@ pub struct DeepBoostingImpl<EnsembleEst> {
     estimators: Vec<EnsembleEst>,
 }
 
-impl DeepBoostingImpl<AverageEnsemble<TreeGBM>> {
-    pub fn new(params: DeepBoostingParameters) -> Self {
+// impl DeepBoostingImpl<AverageEnsemble<TreeGBM>> {
+// E = AverageEnsemble<TreeGBM>
+impl<E: Ensemble> ConstructibleWithArg for DeepBoostingImpl<E> {
+    type Arg = DeepBoostingParameters;
+    fn new(params: Self::Arg) -> Self {
         DeepBoostingImpl {
             params: params,
             estimators: vec![],
@@ -80,6 +83,11 @@ impl DeepBoostingImpl<AverageEnsemble<TreeGBM>> {
 
 // impl<T, P> Estimator for DeepBoostingImpl<AverageEnsemble<T>>
 //     where T: Estimator + WithBestParameters<Params=P> + ConstructibleWithRcArg<Arg=P> {
+// T = TreeGBM
+// E = AverageEnsemble<T>
+// impl<T, E> Estimator for DeepBoostingImpl<E>
+//     where T: Estimator + WithBestParameters + ConstructibleWithRcArg,
+//           E: Ensemble {
 impl Estimator for DeepBoostingImpl<AverageEnsemble<TreeGBM>> {
     fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
         self.estimators.clear();
@@ -93,6 +101,7 @@ impl Estimator for DeepBoostingImpl<AverageEnsemble<TreeGBM>> {
             // let opt_params = Rc::new(T::cv_best_params(&acc_columns.view(), &cur_target.view()));
             let opt_params = Rc::new(TreeGBM::cv_best_params(&acc_columns.view(), &cur_target.view()));
             let mut ensemble = AverageEnsemble::new(self.params.layer_width, opt_params);
+            // let mut ensemble = E::new(self.params.layer_width, opt_params);
 
             // fit ensemble on generated features
             ensemble.fit(&acc_columns.view(), &cur_target.view());

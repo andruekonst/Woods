@@ -66,15 +66,18 @@ pub struct DecisionRuleImpl {
     pub split_info: Option<Split>
 }
 
-fn find_split<'a, 'b>(column: &'a ArrayView1<'_, D>, target: &ArrayView1<'_, D>, indices: Option<&'b Vec<usize>>, id: usize) -> Option<Split> {
+fn find_split<'a, 'b>(
+        column: &'a ArrayView1<'_, D>,
+        target: &ArrayView1<'_, D>,
+        indices: Option<&'b Vec<usize>>,
+        id: usize
+    ) -> Option<Split> {
     let min: D = column.iter_with_index(indices).map(NonNan::from).min().map(NonNan::into)?;
     let max: D = column.iter_with_index(indices).map(NonNan::from).max().map(NonNan::into)?;
     let mut rng = rand::thread_rng();
-    // println!("Min: {}, max: {}", min, max);
     let threshold: D = if min < max {
         rng.gen_range(min, max)
     } else {
-        // min
         return None;
     };
 
@@ -90,7 +93,6 @@ fn find_split<'a, 'b>(column: &'a ArrayView1<'_, D>, target: &ArrayView1<'_, D>,
         k.0 > threshold
     }).map(|k| k.1).collect();
 
-    // let impurity = left.error() * (left.len() as D) + right.error() * (right.len() as D);
     let impurity = left.population_variance() * (left.len() as D) + right.population_variance() * (right.len() as D);
     
     Some(Split {
@@ -171,7 +173,6 @@ impl SplitRule for DecisionRuleImpl {
 
 impl Estimator for DecisionRuleImpl {
     fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
-        // println!("Number of features: {}; number of samples: {}", columns.dim().0, target.dim());
         self.fit_by_indices(columns, target, None);
     }
 

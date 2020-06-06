@@ -5,14 +5,14 @@ use crate::numerics::D;
 use std::rc::Rc;
 use serde::{Serialize, Deserialize};
 
+const DEFAULT_TREE_DEPTH: u8 = 3u8;
+const DEFAULT_TREE_MIN_SAMPLES_SPLIT: usize = 2usize;
+
 #[derive(Serialize, Deserialize)]
 pub struct TreeParameters {
     pub depth: u8,
     pub min_samples_split: usize,
 }
-
-const DEFAULT_TREE_DEPTH: u8 = 3u8;
-const DEFAULT_TREE_MIN_SAMPLES_SPLIT: usize = 2usize;
 
 impl TreeParameters {
     pub fn new(depth: Option<u8>, min_samples_split: Option<usize>) -> Self {

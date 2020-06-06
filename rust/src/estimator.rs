@@ -8,6 +8,11 @@ pub trait Estimator {
     fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D>;
 }
 
+pub trait ConstructibleWithArg {
+    type Arg;
+    fn new(arg: Self::Arg) -> Self;
+}
+
 pub trait ConstructibleWithRcArg {
     type Arg;
     fn new(arg: Rc<Self::Arg>) -> Self;
