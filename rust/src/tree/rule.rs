@@ -103,7 +103,7 @@ pub struct SplitIndices {
     pub indices: [Indices; 2]
 }
 
-/// Split rule can be fit by indices and can split data indices into `SplitIndices`.
+/// Split rule can be fit by indices and then split data indices into `SplitIndices`.
 pub trait SplitRule {
     fn new() -> Self;
     /// Fit using elements corresponding to `indices`.
@@ -131,7 +131,7 @@ impl SplitRule for RandomSplitRule {
         }).filter(|opt| {
             opt.is_some()
         }).min_by_key(|split| {
-            NonNan::new(split.as_ref().unwrap().impurity).unwrap()
+            NonNan::from(split.as_ref().unwrap().impurity)
         })?;
         Some(())
     }

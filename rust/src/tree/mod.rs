@@ -1,3 +1,9 @@
+//! Binary Decision Trees.
+//! 
+//! Each decision tree is based on [`SplitRule`].
+//! 
+//! Currently, only [`rule::RandomSplitRule`] is implemented.
+
 use ndarray::{ArrayView2, ArrayView1, Array1, Axis};
 // use crate::rule::{SplitRule};
 use crate::estimator::{Estimator, ConstructibleWithRcArg};

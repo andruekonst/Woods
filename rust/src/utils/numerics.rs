@@ -1,21 +1,21 @@
+//! Numeric utils: default floating point type (`D`) and `NonNan` wrapper.
+//! 
+
 use std::cmp::Ordering;
 
+/// Default floating point type.
 pub type D = f64;
 
-/// Numeric data type wrapper with ordering.
+/// Numeric data type wrapper with ordering for non-`NaN` numbers.
+/// 
+/// **NaN-safeness should be checked manually before wrapping into `NonNan`**
+/// 
+/// IEEE-754 floating point numbers like `f64` don't implement [`Ord`] trait.
+/// This wrapper implements [`Ord`] trait for all non-`NaN` numbers.
+/// `NaN` number will result it `panic`.
+/// 
 #[derive(PartialEq,PartialOrd)]
 pub struct NonNan(D);
-
-impl NonNan {
-    pub fn new(val: D) -> Option<NonNan> {
-        Some(NonNan(val))
-        // if val.is_nan() {
-        //     None
-        // } else {
-        //     Some(NonNan(val))
-        // }
-    }
-}
 
 impl Eq for NonNan {}
 
@@ -33,13 +33,13 @@ impl Ord for NonNan {
 
 impl From<D> for NonNan {
     fn from(item: D) -> Self {
-        NonNan::new(item).unwrap()
+        NonNan(item)
     }
 }
 
 impl From<&D> for NonNan {
     fn from(item: &D) -> Self {
-        NonNan::new(*item).unwrap()
+        NonNan(*item)
     }
 }
 
