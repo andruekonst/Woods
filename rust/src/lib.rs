@@ -5,7 +5,15 @@
 //! All estimators use [`ndarray`] as a tensor framework.
 //! 
 //! # Installation of Python extension
-//! Run `> python setup.py install` to build and install python extension.
+//! 1. Change toolchain to nightly (required by `pyo3`)
+//! ```
+//! > rustup toolchain install nightly
+//! > rustup default nightly
+//! ```
+//! 2. Run `setup.py` to build / install extension
+//! ```
+//! > python setup.py install
+//! ``` 
 //! 
 //! For *Windows* platform it is recommended to use [Anaconda](http://anaconda.com).
 //! 

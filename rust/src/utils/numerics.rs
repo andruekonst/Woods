@@ -2,6 +2,7 @@ use std::cmp::Ordering;
 
 pub type D = f64;
 
+/// Numeric data type wrapper with ordering.
 #[derive(PartialEq,PartialOrd)]
 pub struct NonNan(D);
 
