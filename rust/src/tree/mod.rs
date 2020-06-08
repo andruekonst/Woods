@@ -6,9 +6,8 @@
 
 use ndarray::{ArrayView2, ArrayView1, Array1, Axis};
 // use crate::rule::{SplitRule};
-use crate::estimator::{Estimator, ConstructibleWithRcArg};
+use crate::estimator::{Estimator, ConstructibleWithCopyArg};
 use crate::utils::numerics::D;
-use std::rc::Rc;
 use serde::{Serialize, Deserialize};
 
 pub mod rule;
@@ -21,7 +20,7 @@ const DEFAULT_TREE_DEPTH: u8 = 3u8;
 const DEFAULT_TREE_MIN_SAMPLES_SPLIT: usize = 2usize;
 
 /// Decision Tree Parameters.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct TreeParameters {
     /// Max tree depth
     pub depth: u8,
@@ -43,7 +42,7 @@ impl TreeParameters {
 #[derive(Serialize, Deserialize)]
 pub struct DecisionTreeImpl<Splitter> {
     /// Configuration
-    params: Rc<TreeParameters>,
+    params: TreeParameters,
     /// Split rules
     splitters: Vec<Splitter>,
     /// Routes from each node to left and right children
@@ -51,7 +50,7 @@ pub struct DecisionTreeImpl<Splitter> {
 }
 
 impl<S: SplitRule> DecisionTreeImpl<S> {
-    pub fn new(params: Rc<TreeParameters>) -> Self {
+    pub fn new(params: TreeParameters) -> Self {
         DecisionTreeImpl {
             params,
             splitters: vec![],
@@ -116,9 +115,9 @@ impl<S: SplitRule> Estimator for DecisionTreeImpl<S> {
     }
 }
 
-impl<T: SplitRule> ConstructibleWithRcArg for DecisionTreeImpl<T> {
+impl<T: SplitRule> ConstructibleWithCopyArg for DecisionTreeImpl<T> {
     type Arg = TreeParameters;
-    fn new(arg: Rc<TreeParameters>) -> Self {
+    fn new(arg: TreeParameters) -> Self {
         DecisionTreeImpl::new(arg)
     }
 }

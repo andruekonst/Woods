@@ -50,7 +50,7 @@ impl WithBestParameters for TreeGBM {
                 let (d, n, lr) = p;
                 let tree_params = TreeParameters::new(Some(*d), None);
                 let params = GradientBoostingParameters::new(tree_params, Some(*n), Some(*lr));
-                let mut est = TreeGBM::new(Rc::new(params));
+                let mut est = TreeGBM::new(params);
                 let score = eval_est_cv(&mut est, 5, columns, target);
                 (p, NonNan::from(score))
              })
@@ -102,7 +102,7 @@ impl Estimator for DeepBoostingImpl<AverageEnsemble<TreeGBM>> {
         for it in 0..self.params.n_estimators {
             // find locally optimal GBM parameters
             // let opt_params = Rc::new(T::cv_best_params(&acc_columns.view(), &cur_target.view()));
-            let opt_params = Rc::new(TreeGBM::cv_best_params(&acc_columns.view(), &cur_target.view()));
+            let opt_params = TreeGBM::cv_best_params(&acc_columns.view(), &cur_target.view());
             let mut ensemble = AverageEnsemble::new(self.params.layer_width, opt_params);
             // let mut ensemble = E::new(self.params.layer_width, opt_params);
 

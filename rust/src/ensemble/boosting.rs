@@ -1,15 +1,15 @@
 use ndarray::{ArrayView2, ArrayView1, Array1};
 use average::Mean;
-use crate::estimator::{Estimator, ConstructibleWithRcArg};
+use crate::estimator::{Estimator, ConstructibleWithCopyArg};
 use crate::tree::rule::RandomSplitRule;
 use crate::utils::numerics::D;
 use crate::tree::{TreeParameters, DecisionTreeImpl};
 use std::rc::Rc;
 use serde::{Serialize, Deserialize};
 
-#[derive(Serialize, Deserialize)]
-pub struct GradientBoostingParameters<EstParams> {
-    pub est_params: Rc<EstParams>,
+#[derive(Serialize, Deserialize, Clone, Copy)]
+pub struct GradientBoostingParameters<EstParams: Copy> {
+    pub est_params: EstParams,
     pub n_estimators: u32,
     pub learning_rate: D,
 }
@@ -17,10 +17,10 @@ pub struct GradientBoostingParameters<EstParams> {
 const DEFAULT_GBM_N_ESTIMATORS: u32 = 100u32;
 const DEFAULT_GBM_LEARNING_RATE: D = 0.1 as D;
 
-impl<E> GradientBoostingParameters<E> {
+impl<E: Copy> GradientBoostingParameters<E> {
     pub fn new(est_params: E, n_estimators: Option<u32>, learning_rate: Option<D>) -> Self {
         GradientBoostingParameters {
-            est_params: Rc::new(est_params),
+            est_params: est_params,
             n_estimators: n_estimators.unwrap_or(DEFAULT_GBM_N_ESTIMATORS),
             learning_rate: learning_rate.unwrap_or(DEFAULT_GBM_LEARNING_RATE),
         }
@@ -28,16 +28,15 @@ impl<E> GradientBoostingParameters<E> {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct GradientBoostingImpl<Est, EstParams> {
-    params: Rc<GradientBoostingParameters<EstParams>>,
+pub struct GradientBoostingImpl<Est, EstParams: Copy> {
+    params: GradientBoostingParameters<EstParams>,
     estimators: Vec<Est>,
     mean: D,
 }
 
-// impl<T, EstParams> GradientBoostingImpl<T, EstParams> {
-impl<T, EstParams> ConstructibleWithRcArg for GradientBoostingImpl<T, EstParams> {
-    type Arg = GradientBoostingParameters<EstParams>;
-    fn new(params: Rc<Self::Arg>) -> Self {
+impl<T, P: Copy> ConstructibleWithCopyArg for GradientBoostingImpl<T, P> {
+    type Arg = GradientBoostingParameters<P>;
+    fn new(params: Self::Arg) -> Self {
         GradientBoostingImpl {
             params: params,
             estimators: vec![],
@@ -46,8 +45,8 @@ impl<T, EstParams> ConstructibleWithRcArg for GradientBoostingImpl<T, EstParams>
     }
 }
 
-impl<E, P> Estimator for GradientBoostingImpl<E, P>
-    where E: Estimator + ConstructibleWithRcArg<Arg=P> {
+impl<E, P: Copy> Estimator for GradientBoostingImpl<E, P>
+    where E: Estimator + ConstructibleWithCopyArg<Arg=P> {
     fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
         self.estimators.clear();
 
@@ -56,7 +55,7 @@ impl<E, P> Estimator for GradientBoostingImpl<E, P>
         let mut cur_target: Array1<D> = target.iter().map(|t| t - self.mean).collect();
         
         for it in 0..self.params.n_estimators {
-            let mut est = E::new(Rc::clone(&self.params.est_params));
+            let mut est = E::new(self.params.est_params);
             est.fit(columns, &cur_target.view());
             let preds = est.predict(columns);
             if it != self.params.n_estimators - 1 {

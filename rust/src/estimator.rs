@@ -19,12 +19,12 @@ pub trait ConstructibleWithArg {
     fn new(arg: Self::Arg) -> Self;
 }
 
-/// Structure can be constructed with reference-conted arguments of associated-type `Arg`.
+/// Structure can be constructed with copyable arguments of associated-type `Arg`, i.e. that implement `Copy` trait.
 /// 
 /// It is useful for estimators which can be joined to ensemble with the same arguments.
-pub trait ConstructibleWithRcArg {
-    type Arg;
-    fn new(arg: Rc<Self::Arg>) -> Self;
+pub trait ConstructibleWithCopyArg {
+    type Arg: Copy;
+    fn new(arg: Self::Arg) -> Self;
 }
 
 /// Fit estimator on training data and calculate mean squared error on validation data.

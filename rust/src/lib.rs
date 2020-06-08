@@ -58,7 +58,7 @@ pub mod tree;
 // pub mod deep_boosting;
 pub mod utils;
 
-use crate::estimator::{Estimator, ConstructibleWithRcArg, ConstructibleWithArg};
+use crate::estimator::{Estimator, ConstructibleWithCopyArg, ConstructibleWithArg};
 use tree::rule::{RandomSplitRule, SplitRule};
 use crate::tree::{TreeParameters, DecisionTreeImpl};
 use crate::ensemble::boosting::{GradientBoostingParameters, GradientBoostingImpl, TreeGBM};
@@ -116,7 +116,7 @@ impl DecisionTree {
     fn new(depth: Option<u8>, min_samples_split: Option<usize>) -> Self {
         let params = TreeParameters::new(depth, min_samples_split);
         DecisionTree {
-            tree: DecisionTreeImpl::new(Rc::new(params))
+            tree: DecisionTreeImpl::new(params)
         }
     }
     
@@ -154,7 +154,7 @@ impl GradientBoosting {
         let est_params = TreeParameters::new(depth, min_samples_split);
         let params = GradientBoostingParameters::new(est_params, n_estimators, learning_rate);
         GradientBoosting {
-            gbm: GradientBoostingImpl::new(Rc::new(params))
+            gbm: GradientBoostingImpl::new(params)
         }
     }
     

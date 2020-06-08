@@ -2,7 +2,6 @@ use serde::{Serialize, Deserialize};
 use ndarray::{ArrayView2, ArrayView1, Array1, Array2, stack, Axis};
 use crate::utils::numerics::D;
 use crate::estimator::*;
-use std::rc::Rc;
 use rayon::prelude::*;
 use rayon::iter::ParallelBridge;
 
@@ -11,7 +10,7 @@ pub mod deep_boosting;
 
 pub trait Ensemble: Estimator {
     type Arg;
-    fn new(width: u32, params: Rc<Self::Arg>) -> Self;
+    fn new(width: u32, params: Self::Arg) -> Self;
     fn predict_all(&self, columns: &ArrayView2<'_, D>) -> Array2<D>;
     fn predict_by_all(&self, preds: &ArrayView2<'_, D>) -> Array1<D>;
 }
@@ -22,12 +21,12 @@ pub struct AverageEnsemble<Est> {
 }
 
 // impl Ensemble<GradientBoostingParameters<TreeParameters>> for AverageEnsemble<TreeGBM> {
-impl<P, T: Estimator + ConstructibleWithRcArg<Arg=P>> Ensemble for AverageEnsemble<T> {
+impl<P: Copy, T: Estimator + ConstructibleWithCopyArg<Arg=P>> Ensemble for AverageEnsemble<T> {
     type Arg = P;
-    fn new(width: u32, params: Rc<P>) -> Self {
+    fn new(width: u32, params: P) -> Self {
     // fn new(width: u32, params: Rc<GradientBoostingParameters<TreeParameters>>) -> Self {
         let estimators = (0..width).map(|_i| {
-            T::new(Rc::clone(&params))
+            T::new(params)
         }).collect();
         AverageEnsemble {
             estimators: estimators,
