@@ -1,8 +1,10 @@
 use serde::{Serialize, Deserialize};
-use ndarray::{ArrayView2, ArrayView1, Array1};
+use ndarray::{ArrayView2, ArrayView1, Array1, Array2, stack, Axis};
 use crate::utils::numerics::D;
 use crate::estimator::*;
 use std::rc::Rc;
+use rayon::prelude::*;
+use rayon::iter::ParallelBridge;
 
 pub mod boosting;
 pub mod deep_boosting;
@@ -10,6 +12,8 @@ pub mod deep_boosting;
 pub trait Ensemble: Estimator {
     type Arg;
     fn new(width: u32, params: Rc<Self::Arg>) -> Self;
+    fn predict_all(&self, columns: &ArrayView2<'_, D>) -> Array2<D>;
+    fn predict_by_all(&self, preds: &ArrayView2<'_, D>) -> Array1<D>;
 }
 
 #[derive(Serialize, Deserialize)]
@@ -28,6 +32,20 @@ impl<P, T: Estimator + ConstructibleWithRcArg<Arg=P>> Ensemble for AverageEnsemb
         AverageEnsemble {
             estimators: estimators,
         }
+    }
+
+    fn predict_all(&self, columns: &ArrayView2<'_, D>) -> Array2<D> {
+        let preds: Vec<Array1<D>> = self.estimators.iter()
+                        .map(|est| est.predict(columns))
+                        .collect();
+        let views: Vec<ArrayView2<'_, D>> = preds.iter().map(|p|
+            p.broadcast((1, p.dim())).unwrap()
+        ).collect();
+        stack(Axis(0), &views[..]).unwrap()
+    }
+
+    fn predict_by_all(&self, preds: &ArrayView2<'_, D>) -> Array1<D> {
+        preds.mean_axis(Axis(0)).unwrap()
     }
 }
 

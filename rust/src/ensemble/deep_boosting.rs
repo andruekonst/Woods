@@ -47,15 +47,18 @@ impl WithBestParameters for TreeGBM {
         let best = iproduct!(depth.iter(), n_epochs.iter(), learning_rate.iter())
             .par_bridge() // compute in parallel
             .map(|p| {
-            let (d, n, lr) = p;
-            let tree_params = TreeParameters::new(Some(*d), None);
-            let params = GradientBoostingParameters::new(tree_params, Some(*n), Some(*lr));
-            let mut est = TreeGBM::new(Rc::new(params));
-            let score = eval_est_cv(&mut est, 5, columns, target);
-            (p, NonNan::from(score))
-        }).min_by_key(|a| {
-            a.1.clone()
-        }).map(|a| a.0).unwrap();
+                let (d, n, lr) = p;
+                let tree_params = TreeParameters::new(Some(*d), None);
+                let params = GradientBoostingParameters::new(tree_params, Some(*n), Some(*lr));
+                let mut est = TreeGBM::new(Rc::new(params));
+                let score = eval_est_cv(&mut est, 5, columns, target);
+                (p, NonNan::from(score))
+             })
+            .min_by_key(|a| {
+                a.1.clone()
+             })
+            .map(|a| a.0)
+            .unwrap();
         let tree_params = TreeParameters::new(Some(*best.0), None);
         let params = GradientBoostingParameters::new(tree_params, Some(*best.1), Some(*best.2));
         params
@@ -106,10 +109,13 @@ impl Estimator for DeepBoostingImpl<AverageEnsemble<TreeGBM>> {
             // fit ensemble on generated features
             ensemble.fit(&acc_columns.view(), &cur_target.view());
             // predict with ensemble
-            let preds = ensemble.predict(&acc_columns.view());
+            // let preds = ensemble.predict(&acc_columns.view());
+            let all_preds = ensemble.predict_all(&acc_columns.view());
+            let preds = ensemble.predict_by_all(&all_preds.view());
             
             // append new features
-            acc_columns = stack(Axis(0), &[acc_columns.view(), preds.broadcast((1, preds.dim())).unwrap()]).unwrap();
+            // acc_columns = stack(Axis(0), &[acc_columns.view(), preds.broadcast((1, preds.dim())).unwrap()]).unwrap();
+            acc_columns = stack(Axis(0), &[acc_columns.view(), all_preds.view()]).unwrap();
 
             // update target
             if it != self.params.n_estimators - 1 {
@@ -124,14 +130,22 @@ impl Estimator for DeepBoostingImpl<AverageEnsemble<TreeGBM>> {
     }
 
     fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
-        // let mut predictions: Array1<D> = Array1::zeros(columns.dim().1);
-        let mut predictions: Array1<D> = self.estimators.first().unwrap().predict(columns);
-        let mut acc_columns: Array2<D> = stack(Axis(0), &[columns.to_owned().view(),
-                                            predictions.broadcast((1, predictions.dim())).unwrap()]).unwrap();
+        // let mut predictions: Array1<D> = self.estimators.first().unwrap().predict(columns);
+        // let mut acc_columns: Array2<D> = stack(Axis(0), &[columns.to_owned().view(),
+        //                                     predictions.broadcast((1, predictions.dim())).unwrap()]).unwrap();
+        let first_est = self.estimators.first().unwrap();
+        // let input_view: ArrayView2<'_, D> = columns.clone();
+        let all_preds: Array2<D> = first_est.predict_all(&columns);
+        let mut acc_columns: Array2<D> = stack(Axis(0), &[columns.to_owned().view(), all_preds.view()]).unwrap();
+        let mut predictions: Array1<D> = first_est.predict_by_all(&all_preds.view());
+
         for est in self.estimators.iter().skip(1) {
-            let cur_preds = est.predict(&acc_columns.view());
+            // let cur_preds = est.predict(&acc_columns.view());
+            let cur_all_preds = est.predict_all(&acc_columns.view());
+            let cur_preds = est.predict_by_all(&cur_all_preds.view());
             // it not needed for the last iteration
-            acc_columns = stack(Axis(0), &[acc_columns.view(), cur_preds.broadcast((1, cur_preds.dim())).unwrap()]).unwrap();
+            // acc_columns = stack(Axis(0), &[acc_columns.view(), cur_preds.broadcast((1, cur_preds.dim())).unwrap()]).unwrap();
+            acc_columns = stack(Axis(0), &[acc_columns.view(), cur_all_preds.view()]).unwrap();
             // predictions = predictions + cur_preds.mapv(|v| self.params.learning_rate * v);
             predictions = predictions + cur_preds * self.params.learning_rate;
         }

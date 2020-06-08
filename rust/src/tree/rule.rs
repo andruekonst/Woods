@@ -126,13 +126,17 @@ impl SplitRule for RandomSplitRule {
     fn fit_by_indices(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>,
                       indices: Option<&Vec<usize>>) -> Option<()> {
         // self.split_info = columns.outer_iter().into_par_iter().enumerate().map(move |col| {
-        self.split_info = columns.outer_iter().enumerate().map(move |col| {
-            find_split(&col.1, &target, indices, col.0)
-        }).filter(|opt| {
-            opt.is_some()
-        }).min_by_key(|split| {
-            NonNan::from(split.as_ref().unwrap().impurity)
-        })?;
+        self.split_info = columns.outer_iter()
+            .enumerate()
+            .map(move |col| {
+                find_split(&col.1, &target, indices, col.0)
+            })
+            .filter(|opt| {
+                opt.is_some()
+            })
+            .min_by_key(|split| {
+                NonNan::from(split.as_ref().unwrap().impurity)
+            })?;
         Some(())
     }
 
