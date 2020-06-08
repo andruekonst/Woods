@@ -1,7 +1,6 @@
 use ndarray::{ArrayView2, ArrayView1, Array1, Axis, Slice};
 use ndarray_stats::DeviationExt;
 use crate::utils::numerics::D;
-use std::rc::Rc;
 
 /// Estimator that could be trained and used to make predictions.
 pub trait Estimator {

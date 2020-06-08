@@ -1,4 +1,4 @@
-#![deny(rust_2018_idioms)]
+// #![deny(rust_2018_idioms)]
 
 //! Woods - Decision Tree Ensembles implementation and a Python extension.
 //! 
@@ -71,7 +71,6 @@ use ndarray::{ArrayView2, Array2};
 use numpy::{IntoPyArray, PyArray2, PyArray1};
 use pyo3::prelude::{pymodule, Py, PyModule, PyResult, Python, pyclass, pymethods, PyObject};
 
-use std::rc::Rc;
 
 fn to_columns<D: numpy::types::TypeNum>(x: &PyArray2<D>) -> Array2<D> {
     let arr: ArrayView2<'_, D> = x.as_array();

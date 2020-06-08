@@ -2,7 +2,6 @@ use ndarray::{ArrayView2, ArrayView1, Array1, Axis, Array2, stack};
 use crate::utils::numerics::{D, NonNan};
 use crate::tree::TreeParameters;
 use super::boosting::{GradientBoostingParameters, TreeGBM};
-use std::rc::Rc;
 use serde::{Serialize, Deserialize};
 use itertools::iproduct;
 use rayon::prelude::*;

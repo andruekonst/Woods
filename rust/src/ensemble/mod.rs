@@ -3,28 +3,38 @@ use ndarray::{ArrayView2, ArrayView1, Array1, Array2, stack, Axis};
 use crate::utils::numerics::D;
 use crate::estimator::*;
 use rayon::prelude::*;
-use rayon::iter::ParallelBridge;
 
 pub mod boosting;
 pub mod deep_boosting;
 
+/// Ensemble of estimators.
+/// 
+/// It can be constructed by number of estimators (`width`) and estimator parameters.
 pub trait Ensemble: Estimator {
+    /// Estimator parameters type.
     type Arg;
     fn new(width: u32, params: Self::Arg) -> Self;
+    /// Predict with all base estimators and concatenate rows of predictions along 0 axis.
     fn predict_all(&self, columns: &ArrayView2<'_, D>) -> Array2<D>;
+    /// Make ensemble prediction from base estimators predictions.
     fn predict_by_all(&self, preds: &ArrayView2<'_, D>) -> Array1<D>;
+
+    fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
+        let all_preds = self.predict_all(columns);
+        self.predict_by_all(&all_preds.view())
+    }
 }
 
+/// Ensemble that averages all base estimators predictions.
 #[derive(Serialize, Deserialize)]
-pub struct AverageEnsemble<Est> {
-    estimators: Vec<Est>
+pub struct AverageEnsemble<E> {
+    estimators: Vec<E>
 }
 
 // impl Ensemble<GradientBoostingParameters<TreeParameters>> for AverageEnsemble<TreeGBM> {
-impl<P: Copy, T: Estimator + ConstructibleWithCopyArg<Arg=P>> Ensemble for AverageEnsemble<T> {
+impl<P: Copy, T: Estimator + ConstructibleWithCopyArg<Arg=P> + Send + Sync> Ensemble for AverageEnsemble<T> {
     type Arg = P;
     fn new(width: u32, params: P) -> Self {
-    // fn new(width: u32, params: Rc<GradientBoostingParameters<TreeParameters>>) -> Self {
         let estimators = (0..width).map(|_i| {
             T::new(params)
         }).collect();
@@ -34,7 +44,8 @@ impl<P: Copy, T: Estimator + ConstructibleWithCopyArg<Arg=P>> Ensemble for Avera
     }
 
     fn predict_all(&self, columns: &ArrayView2<'_, D>) -> Array2<D> {
-        let preds: Vec<Array1<D>> = self.estimators.iter()
+        let preds: Vec<Array1<D>> = self.estimators
+                        .par_iter()
                         .map(|est| est.predict(columns))
                         .collect();
         let views: Vec<ArrayView2<'_, D>> = preds.iter().map(|p|
@@ -48,22 +59,16 @@ impl<P: Copy, T: Estimator + ConstructibleWithCopyArg<Arg=P>> Ensemble for Avera
     }
 }
 
-impl<T: Estimator> Estimator for AverageEnsemble<T> {
+impl<T: Estimator + Send + Sync> Estimator for AverageEnsemble<T>
+    where AverageEnsemble<T>: Ensemble {
     fn fit(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>) {
-        for est in &mut self.estimators {
-            est.fit(columns, target);
-        }
+        self.estimators.par_iter_mut()
+                       .for_each(|est| {
+                           est.fit(columns, target)
+                        });
     }
 
     fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
-        let preds = self.estimators.iter()
-                        .map(|est| est.predict(columns));
-        let mut result = Array1::zeros(columns.dim().1);
-        let alpha: D = (1.0 as D) / (self.estimators.len() as D);
-        for pred in preds {
-            result = result + pred;
-        }
-        result *= alpha;
-        result
+        Ensemble::predict(self, columns) 
     }
 }

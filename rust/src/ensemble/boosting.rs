@@ -4,7 +4,6 @@ use crate::estimator::{Estimator, ConstructibleWithCopyArg};
 use crate::tree::rule::RandomSplitRule;
 use crate::utils::numerics::D;
 use crate::tree::{TreeParameters, DecisionTreeImpl};
-use std::rc::Rc;
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
