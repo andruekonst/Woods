@@ -1,10 +1,11 @@
-use ndarray::{ArrayView2, ArrayView1, Array1};
+use ndarray::{ArrayView2, ArrayView1, Array1, Array2, Axis};
 use average::Mean;
 use crate::estimator::{Estimator, ConstructibleWithCopyArg};
 use crate::tree::rule::RandomSplitRule;
 use crate::utils::numerics::D;
 use crate::tree::{TreeParameters, DecisionTreeImpl};
 use serde::{Serialize, Deserialize};
+use super::{Ensemble, EstimatorsCollection};
 
 #[derive(Serialize, Deserialize, Clone, Copy)]
 pub struct GradientBoostingParameters<EstParams: Copy> {
@@ -65,12 +66,25 @@ impl<E, P: Copy> Estimator for GradientBoostingImpl<E, P>
     }
 
     fn predict(&self, columns: &ArrayView2<'_, D>) -> Array1<D> {
-        let mut predictions: Array1<D> = Array1::from_elem(columns.dim().1, self.mean);
-        for est in &self.estimators {
-            let cur_preds = est.predict(columns);
-            predictions = predictions + cur_preds * self.params.learning_rate;
-        }
-        predictions
+        self.predict_ensemble(columns)
+    }
+}
+
+impl<E, P: Copy> Ensemble for GradientBoostingImpl<E, P>
+    where E: Estimator + ConstructibleWithCopyArg<Arg=P> {
+    type Arg = P;
+    fn make(width: u32, est_params: P) -> Self {
+        Self::new(
+            GradientBoostingParameters::new(est_params, Some(width), None)
+        )
+    }
+
+    fn predict_all(&self, columns: &ArrayView2<'_, D>) -> Array2<D> {
+        self.estimators.make_predictions(columns)
+    }
+
+    fn predict_by_all(&self, preds: &ArrayView2<'_, D>) -> Array1<D> {
+        preds.sum_axis(Axis(0)) * self.params.learning_rate + self.mean
     }
 }
 

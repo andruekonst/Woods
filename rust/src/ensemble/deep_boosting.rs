@@ -102,7 +102,7 @@ impl Estimator for DeepBoostingImpl<AverageEnsemble<TreeGBM>> {
             // find locally optimal GBM parameters
             // let opt_params = Rc::new(T::cv_best_params(&acc_columns.view(), &cur_target.view()));
             let opt_params = TreeGBM::cv_best_params(&acc_columns.view(), &cur_target.view());
-            let mut ensemble = AverageEnsemble::new(self.params.layer_width, opt_params);
+            let mut ensemble = AverageEnsemble::make(self.params.layer_width, opt_params);
             // let mut ensemble = E::new(self.params.layer_width, opt_params);
 
             // fit ensemble on generated features
