@@ -4,15 +4,13 @@ from sklearn.datasets import make_regression, make_friedman2
 from sklearn.metrics import mean_squared_error
 from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.model_selection import GridSearchCV
+from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.base import BaseEstimator, RegressorMixin
 from time import time
+import os
 
-a = np.arange(10)
-print(a)
-print("Woods mean:", woods.mean(a.astype(np.double)))
-print("NumPy mean:", np.mean(a))
 
+print("Check DecisionRule:")
 n = 10
 x = np.arange(n * 4).reshape((n, -1)).astype(np.double)
 y = np.arange(n).astype(np.double)
@@ -23,62 +21,67 @@ y[n // 2:] = 1.0
 print(x)
 print(y)
 print(f"x shape: {x.shape}\ny shape: {y.shape}")
-# print("Woods:", woods.fit(x, y))
-dr = woods.RandomDecisionRule()
-dr.fit(x, y, 0)
-print("woods:", dr.get_split())
-print("woods predictions:", dr.predict(x))
+dr = woods.DecisionRule()
+dr.fit(x, y)
+print("  woods predictions:", dr.predict(x))
 
-# X, y = make_regression(random_state=0)
-# X = X.astype(np.double)
-# y = y.astype(np.double)
+print("Check DecisionTree")
 X = x.copy()
 y = np.arange(n).astype(np.double)
-dt = woods.RandomizedDecisionTree()
-dt.set_depth(4)
-dt.fit(X, y, 0)
+dt = woods.DecisionTree(depth=5, min_samples_split=2)
+dt.fit(X, y)
 print(y)
-print("woods tree predictions:", dt.predict(X))
-print(np.mean(np.linalg.norm(y - dt.predict(X))))
+print("  woods tree predictions:", dt.predict(X))
+print("  ", mean_squared_error(y, dt.predict(X)))
 
-from sklearn.model_selection import train_test_split
+models_dir = "tmp_models"
+print(f"Make temporary models directory: {models_dir}")
+os.makedirs(models_dir, exist_ok=True)
+dt_filename = os.path.join(models_dir, "test_dt.json")
+print(f"Check DecisionTree.save('{dt_filename}')")
+dt.save(dt_filename)
+
+print(f"Check DecisionTree.load('{dt_filename}')")
+loaded_dt = woods.DecisionTree()
+loaded_dt.load(dt_filename)
+print("  woods loaded tree predictions:", loaded_dt.predict(X))
+print("    ", mean_squared_error(y, loaded_dt.predict(X)))
+
+print("Check GradientBoosting")
+params = dict(depth=5,
+              min_samples_split=2,
+              n_estimators=100,
+              learning_rate=0.1)
+gbm = woods.GradientBoosting(**params)
+gbm.fit(X, y)
+print(y)
+print("  woods gbm predictions:", gbm.predict(X))
+print("  ", mean_squared_error(y, gbm.predict(X)))
+
+n_experiments = 10
+n_repeats = 10
+
 X, y = make_friedman2(250, noise=1.0, random_state=0)
 X = X.astype(np.double)
 y = y.astype(np.double)
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=0)
 
-rdt = woods.RandomizedDecisionTree()
-rdt.set_depth(5)
-rdt.fit(X_train, y_train, 0)
-print("woods randomized decision tree predictions:") # , rdt.predict(X))
-print(np.mean(np.linalg.norm(y_test - rdt.predict(X_test))))
-
-n_experiments = 10
-n_repeats = 10
-
-# models parameters
-n_estimators = 100
-max_depth = 5
-learning_rate = 0.1
-
-gbm = woods.RandomizedGradientBoosting()
-gbm.set_depth(max_depth)
-gbm.set_iterations(n_estimators)
-gbm.set_learning_rate(learning_rate)
+gbm = woods.GradientBoosting(**params)
 
 gbm_times = []
 for j in range(n_experiments):
     start = time()
     for i in range(n_repeats):
-        gbm.fit(X_train, y_train, 0)
+        gbm.fit(X_train, y_train)
     end = time()
     gbm_times.append(end - start)
-print(f"time: {np.mean(gbm_times)} +- {np.std(gbm_times)}")
-print("woods gradient boosting predictions:") # , gbm.predict(X))
+print(f"  fit time ({n_experiments} experiments with {n_repeats} repetitions):")
+print(f"    {np.mean(gbm_times)} +- {np.std(gbm_times)}")
+print("  woods gradient boosting predictions:") # , gbm.predict(X))
 # print(np.mean(np.linalg.norm(y_test - gbm.predict(X_test))))
-print(mean_squared_error(y_test, gbm.predict(X_test)))
-print("woods gbm predict times:")
+print("    ", mean_squared_error(y_test, gbm.predict(X_test)))
+print("  woods gbm predict times:")
 gbm_times = []
 for j in range(n_experiments):
     start = time()
@@ -86,28 +89,26 @@ for j in range(n_experiments):
         gbm.predict(X_train)
     end = time()
     gbm_times.append(end - start)
-print(f"  {np.mean(gbm_times)} +- {np.std(gbm_times)}")
-gbm_times = []
-for j in range(n_experiments):
-    start = time()
-    for i in range(n_repeats):
-        gbm.predict_rowwise(X_train)
-    end = time()
-    gbm_times.append(end - start)
-print(f"  {np.mean(gbm_times)} +- {np.std(gbm_times)}")
+print(f"    {np.mean(gbm_times)} +- {np.std(gbm_times)}")
 
+
+print("Check WoodsGBMRegressor")
 class WoodsGBMRegressor(BaseEstimator, RegressorMixin):
-    def __init__(self, n_estimators=100, max_depth=3, learning_rate=0.1):
+    def __init__(self, n_estimators=100, max_depth=3, min_samples_split=2, learning_rate=0.1):
         self.n_estimators = n_estimators
         self.max_depth = max_depth
+        self.min_samples_split = min_samples_split
         self.learning_rate = learning_rate
 
     def fit(self, X, y):
-        self.est_ = woods.RandomizedGradientBoosting()
-        self.est_.set_depth(self.max_depth)
-        self.est_.set_iterations(self.n_estimators)
-        self.est_.set_learning_rate(self.learning_rate)
-        self.est_.fit(X, y, int(time()))
+        params = dict(
+            depth=self.max_depth,
+            min_samples_split=self.min_samples_split,
+            n_estimators=self.n_estimators,
+            learning_rate=self.learning_rate,
+        )
+        self.est_ = woods.GradientBoosting(**params)
+        self.est_.fit(X, y)
 
     def predict(self, X):
         return self.est_.predict(X)
@@ -122,13 +123,61 @@ model = GridSearchCV(WoodsGBMRegressor(), grid,
                         scoring='neg_mean_squared_error',
                         n_jobs=-1)
 model.fit(X_train, y_train)
-print("best woods randomized gradient boosting predictions:")
-print(mean_squared_error(y_test, model.predict(X_test)))
-print(f"best parameters: {model.best_params_}")
+print("  best woods randomized gradient boosting predictions:")
+print("    ", mean_squared_error(y_test, model.predict(X_test)))
+print(f"  best parameters: {model.best_params_}")
 
-est = GradientBoostingRegressor(max_depth=max_depth, n_estimators=n_estimators,
-                                learning_rate=learning_rate)
-# est = DecisionTreeRegressor(max_depth=5, splitter="random", random_state=0)
+gbm_filename = os.path.join(models_dir, "test_gbm.json")
+print(f"Check WoodsGBMRegressor.best_estimator_.est_.save('{gbm_filename}')")
+model.best_estimator_.est_.save(gbm_filename)
+
+print(f"Check GradientBoosting.load('{gbm_filename}')")
+loaded_gbm = woods.GradientBoosting()
+loaded_gbm.load(gbm_filename)
+print("  best loaded gbm predictions:")
+print("    ", mean_squared_error(y_test, loaded_gbm.predict(X_test)))
+
+print("Check DeepGradientBoosting")
+cb = woods.DeepGradientBoosting(n_estimators=5)
+
+# cb_times = []
+# for j in range(n_experiments):
+#     start = time()
+#     for i in range(n_repeats):
+#         cb.fit(X_train, y_train)
+#     end = time()
+#     cb_times.append(end - start)
+# print(f"  fit time ({n_experiments} experiments with {n_repeats} repetitions):")
+# print(f"    {np.mean(cb_times)} +- {np.std(cb_times)}")
+cb.fit(X_train, y_train)
+print("  woods deep gradient boosting predictions:") # , gbm.predict(X))
+# print(np.mean(np.linalg.norm(y_test - gbm.predict(X_test))))
+print("    ", mean_squared_error(y_test, cb.predict(X_test)))
+print("  woods deep gradient boosting predict times:")
+cb_times = []
+for j in range(n_experiments):
+    start = time()
+    for i in range(n_repeats):
+        cb.predict(X_train)
+    end = time()
+    cb_times.append(end - start)
+print(f"    {np.mean(cb_times)} +- {np.std(cb_times)}")
+
+cb_filename = os.path.join(models_dir, "test_cb.bin")
+print(f"Check DeepGradientBoosting.save({cb_filename})")
+cb.save(cb_filename, format='bincode')
+
+print(f"Check DeepGradientBoosting.load('{cb_filename}')")
+loaded_cb = woods.DeepGradientBoosting()
+loaded_cb.load(cb_filename, format='bincode')
+print("  best loaded deep gbm predictions:")
+print("    ", mean_squared_error(y_test, loaded_cb.predict(X_test)))
+
+
+
+print("Scikit-learn GradientBoostingRegressor:")
+est = GradientBoostingRegressor(max_depth=params["depth"], n_estimators=params["n_estimators"],
+                                learning_rate=params["learning_rate"])
 est_times = []
 for j in range(n_experiments):
     start = time()
@@ -137,16 +186,14 @@ for j in range(n_experiments):
     end = time()
     est_times.append(end - start)
 print(f"time: {np.mean(est_times)} +- {np.std(est_times)}")
-print("sklearn gradient boosting predictions:")
-print(mean_squared_error(y_test, est.predict(X_test)))
-# print(np.mean(np.linalg.norm(y_test - est.predict(X_test))))
+print("  sklearn gradient boosting predictions:")
+print("    ", mean_squared_error(y_test, est.predict(X_test)))
 model = GridSearchCV(est, grid,
                         scoring='neg_mean_squared_error',
                         n_jobs=-1)
 model.fit(X_train, y_train)
-print("best sklearn gradient boosting predictions:")
-print(mean_squared_error(y_test, model.predict(X_test)))
-print(f"best parameters: {model.best_params_}")
+print("  best sklearn gradient boosting predictions:")
+print("    ", mean_squared_error(y_test, model.predict(X_test)))
+print(f"  best parameters: {model.best_params_}")
 
 print("Done")
-# print(woods.mean())

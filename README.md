@@ -21,7 +21,7 @@ rustup toolchain install nightly
 rustup default nightly
 ```
 ### Install Python extension
-Go to `rust` dir and run `setup.py`:
+Run `setup.py`:
 ```
 python setup.py install --user
 ```
