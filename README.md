@@ -1,14 +1,15 @@
 # Woods: Decision Tree Ensembles
 
 Currently implemented algorithms:
-1. Semi-randomized decision tree (variance minimization).
+1. Partially randomized decision tree (variance minimization).
 2. Gradient Boosting of decision trees (MSE minimization).
 3. Average ensemble of GBM.
 4. Deep Gradient Boosting (of Average ensembles of GBM).
 
 ## TODO
-* Implement Median-split Decision Tree
-* Provide optional min&max search based on pre-sorting (find min&max of `array[indices]`)
+* Implement median-split, best-split decision tree;
+* Provide optional min&max search based on pre-sorting (find min&max of `array[indices]`);
+* Add different loss-functions, ranking support.
 
 ## Installation
 
