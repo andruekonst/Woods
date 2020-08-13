@@ -125,9 +125,34 @@ impl SplitRule for RandomSplitRule {
 
     fn fit_by_indices(&mut self, columns: &ArrayView2<'_, D>, target: &ArrayView1<'_, D>,
                       indices: Option<&Vec<usize>>) -> Option<()> {
+        let n_features = columns.dim().0;
+        let need_features = 1;
+        let mut rng = rand::thread_rng();
+        let active_features: Vec<usize> = (0..need_features)
+                                            .map(|_| rng.gen_range(0, n_features))
+                                            .collect();
+
         // self.split_info = columns.outer_iter().into_par_iter().enumerate().map(move |col| {
         self.split_info = columns.outer_iter()
             .enumerate()
+            .filter(|col| {
+                if need_features == 0 {
+                    false
+                } else {
+                    for i in &active_features {
+                        if &col.0 == i {
+                            return true;
+                        }
+                    }
+                    false
+                    // if selected_feature == col.0 {
+                    //     need_features -= 1;
+                    //     true
+                    // } else {
+                    //     false
+                    // }
+                }
+            })
             .map(move |col| {
                 find_split(&col.1, &target, indices, col.0)
             })
